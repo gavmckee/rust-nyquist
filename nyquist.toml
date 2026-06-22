@@ -41,3 +41,9 @@ enabled = true
 
 [samplers."tcp/retransmit"]
 enabled = true
+
+[samplers.disk]
+enabled = false
+
+[samplers."disk/blockio"]
+enabled = true

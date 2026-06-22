@@ -42,3 +42,10 @@ enabled = true
 
 [samplers."tcp/retransmit"]
 enabled = true
+
+# BPF disk/blockio replaces procfs disk for bytes/requests + adds latency histograms.
+[samplers.disk]
+enabled = false
+
+[samplers."disk/blockio"]
+enabled = true

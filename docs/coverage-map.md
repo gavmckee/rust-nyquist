@@ -23,7 +23,7 @@ CPU, per interface, per `/proc` field) rather than statically named in source.
 | `network/receive/dropped`, `network/transmit/dropped` | yes — per interface | `network/receive/dropped{iface="ens3"}` | `/proc/net/dev` | BPF `network/traffic` (`kfree_skb` RX reasons + `net_dev_xmit` rc≠0) | **Done** |
 | `network/receive/errors`, `network/transmit/errors` | yes — per interface | `network/receive/errors{iface="ens3"}` | `/proc/net/dev` | driver-level hardware counters — no generic BPF hook; retained-procfs | Retained (follow-on) |
 | **Note** | | Label simplified to `{iface}` only; procfs uses `{iface,driver,mtu}`. Disable `[samplers.network]` and enable `[samplers."network/traffic"]` to switch. | | | |
-| `disk/{read,write}/bytes` | yes — per device | `disk/read/bytes{device="sda"}` | `/proc/diskstats` | BPF `blockio/{latency,requests}` | Retained (follow-on) |
+| `disk/{read,write}/{bytes,requests,latency}` | yes — per device (`device`) | `disk/read/bytes{device="vda"}`, `disk/read/latency{device="vda"}` | `/proc/diskstats` | BPF `disk/blockio` (`raw_tp/block_rq_complete`, mmap ARRAYs; adds per-device latency histograms) | **Done** |
 | `ip/*` | no | `/proc/net/snmp` Ip section | `/proc/net/snmp` | retained-procfs or BPF | Retained |
 | `tcp/*` (snmp) | no | `tcp/active_opens`, `tcp/{in,out}_segs` | `/proc/net/snmp` | retained-procfs or BPF | Retained |
 | `udp/*` | no | `udp/{in,out}_datagrams`, `udp/in_errors` | `/proc/net/snmp` | retained-procfs | Retained |
