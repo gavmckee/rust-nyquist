@@ -13,7 +13,8 @@ CPU, per interface, per `/proc` field) rather than statically named in source.
 
 | Family | Dynamic? | Representative emitted names | Current source | Target source | Status |
 |---|---|---|---|---|---|
-| `cpu/usage/{user,nice,system,idle,iowait,irq,softirq}` | yes — per CPU (`cpu=N`) | `cpu/usage/user{cpu="0"}` | `/proc/stat` | BPF `cpu/usage` | Retained (follow-on) |
+| `cpu/usage/user`, `cpu/usage/nice`, `cpu/usage/system` | yes — per CPU (`cpu=N`) | `cpu/usage/user{cpu="cpu0"}` | `/proc/stat` | **BPF `cpu/usage` (partial — `kprobe/cpuacct_account_field`)** | **In progress (cpu/usage slice)** |
+| `cpu/usage/idle`, `cpu/usage/iowait`, `cpu/usage/irq`, `cpu/usage/softirq` | yes — per CPU | `cpu/usage/idle{cpu="cpu0"}` | `/proc/stat` | BPF `cpu/usage` (follow-on — needs sched_switch + irq tracepoints; vtime kernels skip `cpuacct_account_field` for these) | Retained (follow-on) |
 | `cpu/load/{1,5,15}` | no | `cpu/load{window="1"}` | `/proc/loadavg` | retained-procfs | Retained |
 | `memory/<field>` | yes — per `/proc/meminfo` field, lower-cased | `memory/memfree`, `memory/memtotal`, `memory/cached`, `memory/buffers`, … | `/proc/meminfo` | retained-procfs (acknowledged drift) | Retained |
 | `psi/{cpu,memory,io}/{some,full}_avg{10,60,300}` | partly — `full` absent for cpu | `psi/cpu/some_avg10` | `/proc/pressure/*` | retained-procfs | Retained |

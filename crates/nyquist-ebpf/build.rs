@@ -20,6 +20,7 @@ fn generate_skeletons() {
     let arch_inc = bpf_dir.join(arch_dir);
 
     let samplers = [
+        ("cpu/usage",          "cpu_usage"),
         ("tcp/packet_latency", "tcp_packet_latency"),
         ("tcp/retransmit",     "tcp_retransmit"),
     ];
