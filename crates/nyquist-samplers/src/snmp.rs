@@ -36,11 +36,13 @@ const TCP_METRICS: [(&str, &str); 4] = [
     ("tcp/in_segs", "InSegs"),
     ("tcp/out_segs", "OutSegs"),
 ];
-const UDP_METRICS: [(&str, &str); 4] = [
-    ("udp/in_datagrams", "InDatagrams"),
-    ("udp/out_datagrams", "OutDatagrams"),
-    ("udp/in_errors", "InErrors"),
-    ("udp/no_ports", "NoPorts"),
+const UDP_METRICS: [(&str, &str); 6] = [
+    ("udp/in_datagrams",   "InDatagrams"),
+    ("udp/out_datagrams",  "OutDatagrams"),
+    ("udp/in_errors",      "InErrors"),
+    ("udp/no_ports",       "NoPorts"),
+    ("udp/rcvbuf_errors",  "RcvbufErrors"),
+    ("udp/sndbuf_errors",  "SndbufErrors"),
 ];
 
 fn ingest(reg: &Registry, now: Instant, text: &str, proto: &str, metrics: &[(&str, &str)]) {
@@ -111,7 +113,7 @@ mod tests {
         let now = Instant::now();
         ingest(&reg, now, text, "Tcp", &TCP_METRICS);
         ingest(&reg, now, text, "Udp", &UDP_METRICS);
-        assert_eq!(reg.metric_ids().len(), 8);
+        assert_eq!(reg.metric_ids().len(), 10);
     }
 }
 
