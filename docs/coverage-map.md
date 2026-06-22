@@ -19,7 +19,10 @@ CPU, per interface, per `/proc` field) rather than statically named in source.
 | `memory/<field>` | yes — per `/proc/meminfo` field, lower-cased | `memory/memfree`, `memory/memtotal`, `memory/cached`, `memory/buffers`, … | `/proc/meminfo` | retained-procfs (acknowledged drift) | Retained |
 | `psi/{cpu,memory,io}/{some,full}_avg{10,60,300}` | partly — `full` absent for cpu | `psi/cpu/some_avg10` | `/proc/pressure/*` | retained-procfs | Retained |
 | `softirq/<type>` | yes — per softirq line, lower-cased | `softirq/timer`, `softirq/net_rx`, `softirq/net_tx`, `softirq/sched`, `softirq/rcu`, … | `/proc/softirqs` | BPF or retained-procfs (decide in follow-on) | Retained |
-| `network/{receive,transmit}/{bytes,errors,dropped}` | yes — per interface | `network/receive/bytes{iface="eth0"}` | `/proc/net/dev` | BPF `network/{traffic,interfaces}` | Retained (follow-on) |
+| `network/receive/bytes`, `network/transmit/bytes` | yes — per interface (`iface`) | `network/receive/bytes{iface="ens3"}` | `/proc/net/dev` | **BPF `network/traffic` (raw_tp/netif_receive_skb + raw_tp/net_dev_xmit)** | **In progress (network/traffic slice)** |
+| `network/receive/dropped`, `network/transmit/dropped` | yes — per interface | `network/receive/dropped{iface="ens3"}` | `/proc/net/dev` | **BPF `network/traffic` (kfree_skb RX reasons + net_dev_xmit rc≠0)** | **In progress (network/traffic slice)** |
+| `network/receive/errors`, `network/transmit/errors` | yes — per interface | `network/receive/errors{iface="ens3"}` | `/proc/net/dev` | driver-level hardware counters — no generic BPF hook; retained-procfs | Retained (follow-on) |
+| **Note** | | Label simplified to `{iface}` only; procfs uses `{iface,driver,mtu}`. Disable `[samplers.network]` and enable `[samplers."network/traffic"]` to switch. | | | |
 | `disk/{read,write}/bytes` | yes — per device | `disk/read/bytes{device="sda"}` | `/proc/diskstats` | BPF `blockio/{latency,requests}` | Retained (follow-on) |
 | `ip/*` | no | `/proc/net/snmp` Ip section | `/proc/net/snmp` | retained-procfs or BPF | Retained |
 | `tcp/*` (snmp) | no | `tcp/active_opens`, `tcp/{in,out}_segs` | `/proc/net/snmp` | retained-procfs or BPF | Retained |

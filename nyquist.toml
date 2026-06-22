@@ -30,6 +30,12 @@ enabled = false
 [samplers."cpu/usage"]
 enabled = true
 
+[samplers.network]
+enabled = false
+
+[samplers."network/traffic"]
+enabled = true
+
 [samplers."tcp/packet_latency"]
 enabled = true
 

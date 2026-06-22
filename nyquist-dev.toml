@@ -28,6 +28,15 @@ enabled = false
 [samplers."cpu/usage"]
 enabled = true
 
+# BPF network/traffic replaces procfs network for bytes+dropped per interface.
+# Labels simplified to {iface} only (procfs uses {iface,driver,mtu}).
+# rx_errors/tx_errors not capturable from generic BPF; procfs handles them.
+[samplers.network]
+enabled = false
+
+[samplers."network/traffic"]
+enabled = true
+
 [samplers."tcp/packet_latency"]
 enabled = true
 
