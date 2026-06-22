@@ -1,0 +1,127 @@
+# rust-nyquist Instrumentation Principles
+
+Derived from [rezolus's `docs/principles.md`](https://github.com/iopsystems/rezolus)
+(MIT OR Apache-2.0) and adapted to rust-nyquist. This is the review checklist for
+every follow-on sampler migration under the Rezolus Alignment effort
+(`docs/superpowers/specs/2026-06-22-rezolus-alignment-design.md`).
+
+Each principle is tagged with its current status:
+- **[MET]** — realized today.
+- **[PENDING]** — committed; lands in a named plan/slice.
+- **[DEVIATION]** — knowingly diverges during migration; tracked, not silent.
+
+rust-nyquist runs a **dual model** during migration: BPF samplers aggregate in
+the kernel and are read mmap-direct; legacy procfs/perf samplers still self-clock
+and feed the userspace sliding-window engine. Principles below apply to the BPF
+path unless noted.
+
+---
+
+## 1. Aggregate in the kernel — **[PENDING]**
+Counters and histograms live in `BPF_MAP_TYPE_ARRAY` maps with `BPF_F_MMAPABLE`;
+increments are `__atomic_fetch_add(__ATOMIC_RELAXED)`. Realized for the TCP slice
+in Plan B (`tcp/packet_latency`, `tcp/retransmit`); procfs samplers remain
+userspace-windowed until each is migrated.
+
+## 2. mmap-direct, zero-syscall reads — **[PENDING]**
+Userspace reads the mmap'd region directly; the hot read path never calls
+`bpf_map_lookup_elem`. Plan B (`Registry::record_distribution_buckets` seam +
+`memmap2` on the BPF array fd).
+
+## 3. Consumers drive cadence — **[MET]**
+No periodic flush/downsample is baked into collection. The `/metrics` endpoint,
+ClickHouse sink, VictoriaMetrics push, and Parquet recorder each read on their
+own interval, and **percentile selection is a consumer concern** computed at read
+time from bucket arrays (`nyquist_core::percentiles::percentiles_from_buckets`),
+not on a collection clock. (Plan A, Tasks A1–A2.) The legacy procfs samplers
+still self-clock — see §10.
+
+## 4. Distributions over summaries — **[MET]** (storage caveat in §9)
+Histograms flow downstream as full H2 bucket arrays. `MetricSnapshot` carries a
+sparse `(upper_bound, count)` array; percentile/time-window choice lives in the
+consumer. (Plan A, Task A1.)
+
+## 5. No per-event streaming for measurement — **[PENDING]**
+Per-event submission to userspace scales with workload throughput and is refused.
+Plan B deletes the TCP ring buffers and the 1-in-128 `tcp_probe` sampling hack;
+overhead no longer scales with packet rate.
+
+## 6. CO-RE on vanilla kernels — **[PENDING]**
+BPF code uses CO-RE (`BPF_CORE_READ`); per-arch, version-pinned `vmlinux.h`
+snapshots are checked in at `crates/nyquist-ebpf/bpf/{x86_64,aarch64}/`. Updates
+are deliberate and per-arch, never silently regenerated. (Plan B, Tasks B1–B2.)
+
+## 7. Bounded constant work per probe — **[PENDING]**
+O(1) hot paths, no loops, relaxed atomics. The CLZ branch-tree H2 indexing in
+`histogram.h` is branch-bounded. (Plan B.)
+
+## 8. Arrays over hashmaps; documented pointer-key exception — **[PENDING]**
+Bounded-integer keys use `BPF_MAP_TYPE_ARRAY`. The one pointer-keyed `HASH`
+(per-socket state keyed by `struct sock*` in `tcp/packet_latency`) is the
+documented exception, carried with its justifying comment. (Plan B, Task B4.)
+
+## 9. H2 histograms with bounded relative error — **[MET]** (windowed) / **[PENDING]** (in-kernel)
+The windowed path uses the `histogram` crate at `grouping_power = 7` (~1% error).
+The in-kernel BPF path uses `grouping_power = 3` (~6.25% max error, 496 buckets),
+matching rezolus. (Windowed: existing; in-kernel: Plan B, Task B3.)
+
+## 10. Tolerate benign races for monotone values — **[PENDING]**
+Monotone high-water values may use non-atomic `array_set_if_larger`, commented as
+a benign race. (Plan B, ported `helpers.h`.)
+
+## 11. Shared BPF infrastructure in headers — **[PENDING]**
+Cross-cutting BPF logic (CLZ/H2 indexing, helpers) lives in shared headers
+(`histogram.h`, `helpers.h`), not duplicated per sampler. (Plan B, Task B1.)
+
+## 12. Userspace overhead is part of the budget — **[MET]**
+Snapshots are O(active metrics); bucket arrays are sparse `(bound, count)` pairs,
+not dense per-metric arrays. (Plan A.)
+
+## 13. Prefer BPF probes over parsing procfs in the hot path — **[DEVIATION, migrating]**
+The dual model (§4 of the design) keeps procfs/perf samplers on their current
+implementation. Procfs is **retired on parity**, one sampler at a time, never on
+a schedule (design §6.3). The retained-procfs families are enumerated in
+[`coverage-map.md`](coverage-map.md).
+
+## 14. Coverage parity — never drop a metric tuple — **[MET]**
+The emitted `(name, label-key set, kind, unit)` tuple set may only grow. A golden
+baseline + parity-gate test guards this (`nyquist_core::coverage`, the
+`coverage_parity` exposition test). A procfs sampler is removed only once its
+replacement emits identical tuples. (Plan A, Task A4; design §6.)
+
+## 15. `linkme` distributed-slice registration — **[MET]** (core) / **[PENDING]** (samplers)
+Samplers register into a `linkme` `SAMPLERS` slice declared in
+`nyquist_core::registration`, replacing the manual factory. The slice and the
+iterator entry points exist (Plan A core); per-sampler `#[distributed_slice]`
+entries land as each crate is migrated (procfs samplers: Plan A Task A3; BPF
+samplers: Plan B).
+
+---
+
+## Operational checklist (run on every sampler migration)
+
+Before retiring a procfs/perf sampler in favour of a BPF replacement:
+
+1. **Tuple parity.** Does the replacement emit the *identical* `(name, labels,
+   kind, unit)` tuples (incl. dynamic families)? Record any rename as an explicit
+   mapping in the golden baseline — never a silent drop. (§14)
+2. **In-kernel aggregation.** Counters/histograms in `BPF_F_MMAPABLE` arrays;
+   relaxed atomics; no per-event userspace streaming. (§1, §5)
+3. **mmap-direct read.** No `bpf_map_lookup_elem` on the read path. (§2)
+4. **CO-RE.** Field access via `BPF_CORE_READ`; no runtime offset parsing. (§6)
+5. **Map choice.** Arrays for bounded keys; any `HASH` (pointer key) carries a
+   justifying comment. (§8)
+6. **Bucket exposition.** Histograms surface as H2 bucket arrays; percentiles
+   computed consumer-side. (§4, §9)
+7. **Parity gate green** with a live capture (`NYQUIST_LIVE_METRICS`). (§14)
+
+## Known deviations
+
+- **Dual model (§13).** procfs/perf and BPF paths coexist during migration behind
+  one snapshot interface; both are independently tested.
+- **Durable-record summaries (§9, design §3.4/§6.6).** The Parquet recorder keeps
+  pre-computed percentile columns in the foundation; switching it to store full
+  H2 bucket arrays is a committed follow-on spec.
+- **Retained procfs families.** `memory/*`, `psi/*`, `loadavg`, `sockstat`,
+  `snmp`/`netstat` (interim), `nic_stats` (ethtool discovery) — see
+  [`coverage-map.md`](coverage-map.md).

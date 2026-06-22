@@ -7,10 +7,10 @@ cpu_usage{cpu="0",state="user"} 0
 cpu_usage_rate{cpu="0",state="user",percentile="99"} 0
 # TYPE cpu_load gauge
 cpu_load{window="1"} 0
-# TYPE memory_MemFree gauge
-memory_MemFree{} 0
-# TYPE memory_MemTotal gauge
-memory_MemTotal{} 0
+# TYPE memory_memfree gauge
+memory_memfree{} 0
+# TYPE memory_memtotal gauge
+memory_memtotal{} 0
 # TYPE network_receive_bytes counter
 network_receive_bytes{iface="eth0"} 0
 # TYPE network_transmit_bytes counter
@@ -21,8 +21,8 @@ disk_read_bytes{device="sda"} 0
 disk_write_bytes{device="sda"} 0
 # TYPE psi_cpu_some_avg10 gauge
 psi_cpu_some_avg10{} 0
-# TYPE softirq_TIMER counter
-softirq_TIMER{} 0
+# TYPE softirq_timer counter
+softirq_timer{} 0
 # TYPE tcp_rtt_us gauge
 tcp_rtt_us{port="443"} 0
 # TYPE tcp_retransmits counter
