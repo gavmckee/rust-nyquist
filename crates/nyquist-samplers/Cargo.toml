@@ -1,0 +1,11 @@
+[package]
+name = "nyquist-samplers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nyquist-core      = { path = "../nyquist-core" }
+nyquist-sysconfig = { path = "../nyquist-sysconfig" }
+async-trait = "0.1"
+tracing = "0.1"
+libc = "0.2"

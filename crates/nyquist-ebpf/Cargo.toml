@@ -1,0 +1,18 @@
+[package]
+name = "nyquist-ebpf"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+nyquist-core = { path = "../nyquist-core" }
+nyquist-ebpf-common = { path = "../nyquist-ebpf-common" }
+aya = { version = "0.13", features = ["async_tokio"] }
+async-trait = "0.1"
+tracing = "0.1"
+anyhow = "1"
+
+[build-dependencies]
+# No longer using aya-build (it doesn't support running from a custom current_dir).
+# Our build.rs invokes cargo directly from crates/nyquist-ebpf-programs/.
+

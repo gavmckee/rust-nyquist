@@ -1,0 +1,19 @@
+[package]
+name = "nyquist-exposition"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nyquist-core = { path = "../nyquist-core" }
+nyquist-sysconfig = { path = "../nyquist-sysconfig" }
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time"] }
+async-trait = "0.1"
+tracing = "0.1"
+anyhow = "1"
+serde_json = "1"
+reqwest = { version = "0.12", features = ["rustls-tls"], default-features = false }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"

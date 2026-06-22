@@ -1,0 +1,19 @@
+[general]
+listen           = "0.0.0.0:9100"
+default_interval = "10ms"
+window           = "60s"
+percentiles      = [50.0, 90.0, 99.0, 99.9]
+
+[victoria_metrics]
+enabled       = true
+url           = "http://localhost:8428"
+push_interval = "10s"
+
+[perf]
+enabled    = true
+max_cpus   = 32
+hw_enabled = true
+sw_enabled = true
+
+[ebpf]
+enabled = true

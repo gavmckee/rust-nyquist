@@ -1,0 +1,55 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: nyquist-vm
+    ports:
+      - "8428:8428"
+    volumes:
+      - vm-data:/storage
+    command:
+      - -retentionPeriod=1
+      - -storageDataPath=/storage
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nyquist-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Anonymous admin access — local dev only, do not expose port 3000 publicly.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
+  nyquist:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: nyquist
+    # Share the host PID namespace so /proc reflects host-level metrics.
+    pid: "host"
+    # privileged grants CAP_BPF + CAP_PERFMON + CAP_NET_ADMIN for eBPF tracepoints
+    # and perf counters. Scope down to specific cap_add + security_opt in production.
+    privileged: true
+    ports:
+      - "9100:9100"
+    volumes:
+      - ./nyquist.toml:/etc/nyquist/config.toml:ro
+      # eBPF tracepoint format files live under debugfs
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+    command: ["--config", "/etc/nyquist/config.toml"]
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
+volumes:
+  vm-data:
+  grafana-data:
