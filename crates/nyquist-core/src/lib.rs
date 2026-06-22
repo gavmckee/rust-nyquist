@@ -8,6 +8,8 @@ pub mod hist;
 pub mod registry;
 pub use registry::{MetricDef, Registry};
 
+pub mod percentiles;
+
 pub mod snapshot;
 pub mod sink;
 pub use snapshot::{MetricSnapshot, RegistrySnapshot};

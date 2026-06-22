@@ -2,8 +2,8 @@ use histogram::Histogram;
 
 /// Grouping power 7 (~1% relative error) and max value power 39
 /// (covers up to ~5.4e11, enough for byte/sec rates).
-const GROUPING_POWER: u8 = 7;
-const MAX_VALUE_POWER: u8 = 39;
+pub const HIST_GROUPING_POWER: u8 = 7;
+pub const HIST_MAX_VALUE_POWER: u8 = 39;
 
 pub struct HistogramSlice {
     inner: Histogram,
@@ -12,7 +12,7 @@ pub struct HistogramSlice {
 impl HistogramSlice {
     pub fn new() -> Self {
         HistogramSlice {
-            inner: Histogram::new(GROUPING_POWER, MAX_VALUE_POWER)
+            inner: Histogram::new(HIST_GROUPING_POWER, HIST_MAX_VALUE_POWER)
                 .expect("valid histogram parameters"),
         }
     }
@@ -22,7 +22,7 @@ impl HistogramSlice {
     }
 
     pub fn clear(&mut self) {
-        self.inner = Histogram::new(GROUPING_POWER, MAX_VALUE_POWER)
+        self.inner = Histogram::new(HIST_GROUPING_POWER, HIST_MAX_VALUE_POWER)
             .expect("valid histogram parameters");
     }
 
@@ -34,7 +34,7 @@ impl HistogramSlice {
 }
 
 pub fn empty_accumulator() -> Histogram {
-    Histogram::new(GROUPING_POWER, MAX_VALUE_POWER).expect("valid histogram parameters")
+    Histogram::new(HIST_GROUPING_POWER, HIST_MAX_VALUE_POWER).expect("valid histogram parameters")
 }
 
 pub fn percentile(acc: &Histogram, p: f64) -> u64 {

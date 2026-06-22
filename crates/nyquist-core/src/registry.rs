@@ -97,23 +97,18 @@ impl Registry {
         self.metrics.iter().map(|e| *e.key()).collect()
     }
 
-    pub fn snapshot(
-        &self,
-        now: std::time::Instant,
-        percentiles: &[f64],
-    ) -> crate::snapshot::RegistrySnapshot {
+    pub fn snapshot(&self, now: std::time::Instant) -> crate::snapshot::RegistrySnapshot {
         let mut metrics = Vec::new();
         for entry in self.metrics.iter() {
             let mut s = entry.value().lock().unwrap();
-            let pct_vals = s.window.percentile_batch(now, percentiles);
-            let pcts = percentiles.iter().copied().zip(pct_vals).collect();
+            let buckets = s.window.bucket_counts(now);
             metrics.push(crate::snapshot::MetricSnapshot {
                 name: s.def.name.clone(),
                 kind: s.def.kind,
                 unit: s.def.unit,
                 labels: s.def.labels.clone(),
                 raw: s.raw,
-                percentiles: pcts,
+                buckets,
             });
         }
         crate::snapshot::RegistrySnapshot { metrics, captured: std::time::SystemTime::now() }
