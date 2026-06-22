@@ -1,58 +1,14 @@
-use std::time::Duration;
-use nyquist_core::registry::Registry;
-use nyquist_core::sampler::Sampler;
-use crate::cpu::CpuSampler;
-use crate::memory::MemorySampler;
-use crate::network::NetworkSampler;
-use crate::disk::DiskSampler;
-use crate::snmp::{IpSampler, TcpSampler, UdpSampler};
-use crate::loadavg::LoadAvgSampler;
-use crate::psi::PsiSampler;
-use crate::sockstat::SockstatSampler;
-use crate::netstat::NetstatSampler;
-use crate::softirqs::SoftirqSampler;
-use crate::tcpinfo::TcpInfoSampler;
-use crate::nic_stats::NicStatsSampler;
-
-pub fn all_sampler_names() -> &'static [&'static str] {
-    &["cpu", "memory", "network", "disk", "ip", "tcp", "udp", "loadavg", "psi", "sockstat", "netstat", "softirqs", "tcpinfo", "nic_stats"]
-}
-
-pub fn build_enabled(
-    reg: &Registry,
-    default_interval: Duration,
-    is_enabled: impl Fn(&str) -> bool,
-    interval_for: impl Fn(&str) -> Option<Duration>,
-) -> Vec<Box<dyn Sampler>> {
-    let mut out: Vec<Box<dyn Sampler>> = Vec::new();
-    for name in all_sampler_names() {
-        if !is_enabled(name) { continue; }
-        let iv = interval_for(name).unwrap_or(default_interval);
-        let s: Box<dyn Sampler> = match *name {
-            "cpu"      => Box::new(CpuSampler::new(reg, iv)),
-            "memory"   => Box::new(MemorySampler::new(reg, iv)),
-            "network"  => Box::new(NetworkSampler::new(reg, iv)),
-            "disk"     => Box::new(DiskSampler::new(reg, iv)),
-            "ip"       => Box::new(IpSampler::new(reg, iv)),
-            "tcp"      => Box::new(TcpSampler::new(reg, iv)),
-            "udp"      => Box::new(UdpSampler::new(reg, iv)),
-            "loadavg"  => Box::new(LoadAvgSampler::new(reg, iv)),
-            "psi"      => Box::new(PsiSampler::new(reg, iv)),
-            "sockstat"  => Box::new(SockstatSampler::new(reg, iv)),
-            "netstat"   => Box::new(NetstatSampler::new(reg, iv)),
-            "softirqs"  => Box::new(SoftirqSampler::new(reg, iv)),
-            "tcpinfo"   => Box::new(TcpInfoSampler::new(reg, iv)),
-            "nic_stats" => Box::new(NicStatsSampler::new(reg, iv)),
-            _ => continue,
-        };
-        out.push(s);
-    }
-    out
-}
+//! Sampler registration now lives in `nyquist_core::registration` via a
+//! `linkme` distributed slice. Each sampler registers itself in its own module
+//! via `#[distributed_slice(SAMPLERS)]`. This module re-exports the iterator
+//! entry points for back-compat with `main.rs`.
+pub use nyquist_core::registration::{all_sampler_names, build_enabled};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
+    use nyquist_core::registry::Registry;
 
     #[test]
     fn respects_enabled_flag() {
@@ -64,6 +20,23 @@ mod tests {
             |_| None,
         );
         let names: Vec<_> = samplers.iter().map(|s| s.name().to_string()).collect();
-        assert_eq!(names, vec!["cpu", "memory", "disk", "ip", "tcp", "udp", "loadavg", "psi", "sockstat", "netstat", "softirqs", "tcpinfo", "nic_stats"]);
+        assert!(!names.iter().any(|n| n == "network"), "network should be disabled: {names:?}");
+        assert!(names.iter().any(|n| n == "cpu"), "cpu should be enabled: {names:?}");
+    }
+
+    #[test]
+    fn slice_contains_registered_samplers() {
+        let names = nyquist_core::registration::all_sampler_names();
+        assert!(names.contains(&"cpu"), "cpu not registered: {names:?}");
+    }
+
+    #[test]
+    fn all_expected_samplers_registered() {
+        let mut names = nyquist_core::registration::all_sampler_names();
+        names.sort_unstable();
+        for expected in ["cpu", "disk", "ip", "loadavg", "memory", "netstat", "network",
+                         "nic_stats", "psi", "sockstat", "softirqs", "tcp", "tcpinfo", "udp"] {
+            assert!(names.contains(&expected), "missing {expected}: {names:?}");
+        }
     }
 }

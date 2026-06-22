@@ -241,3 +241,9 @@ fn list_physical_ifaces() -> Vec<String> {
         }).collect())
         .unwrap_or_default()
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "nic_stats",
+    init: |reg, iv| Box::new(NicStatsSampler::new(reg, iv)),
+};

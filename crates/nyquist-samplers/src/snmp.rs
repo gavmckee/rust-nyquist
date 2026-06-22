@@ -114,3 +114,21 @@ mod tests {
         assert_eq!(reg.metric_ids().len(), 8);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static IP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "ip",
+    init: |reg, iv| Box::new(IpSampler::new(reg, iv)),
+};
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static TCP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "tcp",
+    init: |reg, iv| Box::new(TcpSampler::new(reg, iv)),
+};
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static UDP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "udp",
+    init: |reg, iv| Box::new(UdpSampler::new(reg, iv)),
+};

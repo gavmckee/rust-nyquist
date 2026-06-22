@@ -18,5 +18,6 @@ pub use sink::{Sink, SinkError};
 
 pub mod sampler;
 pub mod scheduler;
+pub mod registration;
 pub use sampler::{Sampler, SamplerError};
 pub use scheduler::spawn_sampler;

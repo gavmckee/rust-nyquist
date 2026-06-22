@@ -68,3 +68,9 @@ mod tests {
         assert_eq!(reg.metric_ids().len(), 21);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "cpu",
+    init: |reg, iv| Box::new(CpuSampler::new(reg, iv)),
+};

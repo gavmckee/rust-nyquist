@@ -87,3 +87,9 @@ mod tests {
         assert_eq!(reg.raw(backlog_id), 42);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "netstat",
+    init: |reg, iv| Box::new(NetstatSampler::new(reg, iv)),
+};
