@@ -23,5 +23,8 @@ max_cpus = 0
 hw_enabled = true
 sw_enabled = true
 
-[ebpf]
+[samplers."tcp/packet_latency"]
+enabled = true
+
+[samplers."tcp/retransmit"]
 enabled = true
