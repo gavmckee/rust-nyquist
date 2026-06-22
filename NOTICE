@@ -1,0 +1,5 @@
+This product includes BPF C headers and program logic adapted from Rezolus
+(https://github.com/iopsystems/rezolus), licensed under MIT OR Apache-2.0.
+The adapted *.bpf.c programs are SPDX-License-Identifier: GPL-2.0, retaining
+the original BCC project attribution where applicable. vmlinux.h files are
+mechanical BTF dumps; their source kernel version is noted in each file header.

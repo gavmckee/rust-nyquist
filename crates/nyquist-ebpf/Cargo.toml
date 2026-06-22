@@ -11,8 +11,18 @@ aya = { version = "0.13", features = ["async_tokio"] }
 async-trait = "0.1"
 tracing = "0.1"
 anyhow = "1"
+linkme = "0.3"
+histogram = "0.11"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libbpf-rs = "0.24"
+memmap2 = "0.9"
+libc = "0.2"
 
 [build-dependencies]
 # No longer using aya-build (it doesn't support running from a custom current_dir).
 # Our build.rs invokes cargo directly from crates/nyquist-ebpf-programs/.
+
+[target.'cfg(target_os = "linux")'.build-dependencies]
+libbpf-cargo = "0.24"
 
