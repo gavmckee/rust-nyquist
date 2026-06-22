@@ -21,6 +21,7 @@ fn generate_skeletons() {
 
     let samplers = [
         ("cpu/usage",          "cpu_usage"),
+        ("cpu/vtime",          "cpu_vtime"),
         ("disk/blockio",       "disk_blockio"),
         ("network/traffic",    "network_traffic"),
         ("tcp/packet_latency", "tcp_packet_latency"),

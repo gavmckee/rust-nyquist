@@ -30,6 +30,9 @@ enabled = false
 [samplers."cpu/usage"]
 enabled = true
 
+[samplers."cpu/vtime"]
+enabled = true
+
 [samplers.network]
 enabled = false
 
