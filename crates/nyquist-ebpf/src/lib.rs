@@ -1,6 +1,3 @@
-pub mod sampler;
-pub use sampler::EbpfSampler;
-
 pub mod libbpf;
 
 /// Touch the BPF sampler modules so their `#[distributed_slice(SAMPLERS)]`

@@ -6,8 +6,6 @@ publish = false
 
 [dependencies]
 nyquist-core = { path = "../nyquist-core" }
-nyquist-ebpf-common = { path = "../nyquist-ebpf-common" }
-aya = { version = "0.13", features = ["async_tokio"] }
 async-trait = "0.1"
 tracing = "0.1"
 anyhow = "1"
@@ -18,10 +16,6 @@ histogram = "0.11"
 libbpf-rs = "0.24"
 memmap2 = "0.9"
 libc = "0.2"
-
-[build-dependencies]
-# No longer using aya-build (it doesn't support running from a custom current_dir).
-# Our build.rs invokes cargo directly from crates/nyquist-ebpf-programs/.
 
 [target.'cfg(target_os = "linux")'.build-dependencies]
 libbpf-cargo = "0.24"

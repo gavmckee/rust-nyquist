@@ -1,0 +1,25 @@
+[general]
+listen = "127.0.0.1:9100"
+default_interval = "10ms"
+window = "60s"
+percentiles = [50.0, 90.0, 99.0, 99.9]
+
+[victoria_metrics]
+enabled = false
+url = "http://localhost:8428"
+
+[clickhouse]
+enabled = false
+url = "http://localhost:18123"
+database = "nyquist"
+username = "default"
+password = ""
+
+[perf]
+enabled = false
+
+[ebpf]
+enabled = false
+
+[recorder]
+enabled = false
