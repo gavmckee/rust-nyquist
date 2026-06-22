@@ -90,7 +90,7 @@ mod tests {
             unit: Unit::Count,
             labels: Labels::new(),
             raw: 100,
-            percentiles: vec![(50.0, 50), (90.0, 90), (99.0, 99), (99.9, 100)],
+            buckets: vec![(50, 5), (90, 3), (99, 1), (100, 1)],
         }
     }
 

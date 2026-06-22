@@ -75,7 +75,6 @@ async fn main() -> anyhow::Result<()> {
             Box::new(sink),
             reg.clone(),
             config.recorder.flush_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         tracing::info!(
@@ -97,7 +96,6 @@ async fn main() -> anyhow::Result<()> {
             Box::new(sink),
             reg.clone(),
             ch.insert_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         // Config watcher: polls sysconfig every 5s, writes sysconfig_values for
@@ -120,12 +118,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if config.victoria_metrics.enabled {
-        let sink = VictoriaMetricsSink::new(&config.victoria_metrics.url);
+        let sink = VictoriaMetricsSink::new(&config.victoria_metrics.url, config.general.percentiles.clone());
         handles.push(spawn_sink(
             Box::new(sink),
             reg.clone(),
             config.victoria_metrics.push_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         tracing::info!(url = %config.victoria_metrics.url, "VictoriaMetrics push enabled");

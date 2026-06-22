@@ -8,10 +8,11 @@ use crate::format::to_prometheus;
 pub struct VictoriaMetricsSink {
     url: String,
     client: reqwest::Client,
+    percentiles: Vec<f64>,
 }
 
 impl VictoriaMetricsSink {
-    pub fn new(base_url: impl Into<String>) -> Self {
+    pub fn new(base_url: impl Into<String>, percentiles: Vec<f64>) -> Self {
         let base = base_url.into();
         let url = format!("{}/api/v1/import/prometheus", base.trim_end_matches('/'));
         VictoriaMetricsSink {
@@ -20,6 +21,7 @@ impl VictoriaMetricsSink {
                 .timeout(Duration::from_secs(10))
                 .build()
                 .expect("http client"),
+            percentiles,
         }
     }
 }
@@ -28,7 +30,7 @@ impl VictoriaMetricsSink {
 impl Sink for VictoriaMetricsSink {
     async fn export(&mut self, snapshot: &RegistrySnapshot) -> Result<(), SinkError> {
         if snapshot.metrics.is_empty() { return Ok(()); }
-        let body = to_prometheus(snapshot);
+        let body = to_prometheus(snapshot, &self.percentiles);
         self.client
             .post(&self.url)
             .header("Content-Type", "text/plain")

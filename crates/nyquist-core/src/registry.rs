@@ -118,7 +118,7 @@ impl Registry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Kind, Labels};
+    use crate::model::Kind;
     use std::time::{Duration, Instant};
 
     #[test]

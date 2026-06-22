@@ -4,6 +4,7 @@ use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Schema};
 use nyquist_core::model::{Kind, Labels, Unit};
 use nyquist_core::snapshot::MetricSnapshot;
+use nyquist_core::percentiles::percentiles_from_buckets;
 
 pub fn nyquist_schema() -> Arc<Schema> {
     Arc::new(Schema::new(vec![
@@ -95,10 +96,13 @@ impl RowAccumulator {
         self.kind.push(kind_str(m.kind).to_string());
         self.unit.push(unit_str(m.unit).to_string());
         self.raw.push(m.raw);
-        self.p50.push(find_pct(&m.percentiles, 50.0));
-        self.p90.push(find_pct(&m.percentiles, 90.0));
-        self.p99.push(find_pct(&m.percentiles, 99.0));
-        self.p99_9.push(find_pct(&m.percentiles, 99.9));
+        // Fixed percentile columns; values computed consumer-side from the
+        // bucket array (design §3.4).
+        let p = percentiles_from_buckets(&m.buckets, &[50.0, 90.0, 99.0, 99.9]);
+        self.p50.push(find_pct(&p, 50.0));
+        self.p90.push(find_pct(&p, 90.0));
+        self.p99.push(find_pct(&p, 99.0));
+        self.p99_9.push(find_pct(&p, 99.9));
     }
 
     pub fn len(&self) -> usize { self.ts_unix_ms.len() }
@@ -127,14 +131,14 @@ mod tests {
     use nyquist_core::model::{Kind, Labels, Unit};
     use nyquist_core::snapshot::MetricSnapshot;
 
-    fn make_metric(name: &str, raw: u64, p50: u64, p90: u64, p99: u64, p99_9: u64) -> MetricSnapshot {
+    fn make_metric(name: &str, raw: u64, buckets: Vec<(u64, u64)>) -> MetricSnapshot {
         MetricSnapshot {
             name: name.to_string(),
             kind: Kind::Counter,
             unit: Unit::Bytes,
             labels: Labels::new(),
             raw,
-            percentiles: vec![(50.0, p50), (90.0, p90), (99.0, p99), (99.9, p99_9)],
+            buckets,
         }
     }
 
@@ -155,7 +159,7 @@ mod tests {
     fn accumulator_push_and_drain() {
         let mut acc = RowAccumulator::new();
         assert!(acc.is_empty());
-        let m = make_metric("cpu/usage/user", 42, 10, 20, 30, 35);
+        let m = make_metric("cpu/usage/user", 42, vec![(10, 5), (30, 5)]);
         acc.push(1_000_000, &m);
         assert_eq!(acc.len(), 1);
         let batch = acc.drain();
@@ -169,21 +173,21 @@ mod tests {
     #[test]
     fn accumulator_drain_multiple_rows() {
         let mut acc = RowAccumulator::new();
-        acc.push(1000, &make_metric("m1", 1, 1, 1, 1, 1));
-        acc.push(2000, &make_metric("m2", 2, 2, 2, 2, 2));
+        acc.push(1000, &make_metric("m1", 1, vec![(1, 1)]));
+        acc.push(2000, &make_metric("m2", 2, vec![(2, 1)]));
         let batch = acc.drain();
         assert_eq!(batch.num_rows(), 2);
     }
 
     #[test]
-    fn missing_percentile_defaults_to_zero() {
+    fn empty_buckets_default_percentiles_to_zero() {
         let m = MetricSnapshot {
             name: "g".to_string(),
             kind: Kind::Gauge,
             unit: Unit::None,
             labels: Labels::new(),
             raw: 7,
-            percentiles: vec![(50.0, 7)],
+            buckets: vec![],
         };
         let mut acc = RowAccumulator::new();
         acc.push(0, &m);

@@ -104,8 +104,14 @@ struct EthtoolSocket(i32);
 
 impl EthtoolSocket {
     fn open() -> io::Result<Self> {
+        // SOCK_CLOEXEC and the ethtool ioctls are Linux-only; on other platforms
+        // compile a plain SOCK_DGRAM so the workspace builds (calls fail at runtime).
+        #[cfg(target_os = "linux")]
+        let sock_type = libc::SOCK_DGRAM | libc::SOCK_CLOEXEC;
+        #[cfg(not(target_os = "linux"))]
+        let sock_type = libc::SOCK_DGRAM;
         let fd = unsafe {
-            libc::socket(libc::AF_INET, libc::SOCK_DGRAM | libc::SOCK_CLOEXEC, 0)
+            libc::socket(libc::AF_INET, sock_type, 0)
         };
         if fd < 0 { return Err(io::Error::last_os_error()); }
         Ok(Self(fd))

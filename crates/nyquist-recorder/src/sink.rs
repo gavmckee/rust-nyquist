@@ -68,7 +68,7 @@ mod tests {
                     unit: Unit::Count,
                     labels: Labels::new().insert("cpu", "0"),
                     raw: 42,
-                    percentiles: vec![(50.0, 10), (90.0, 20), (99.0, 30), (99.9, 35)],
+                    buckets: vec![(10, 5), (20, 3), (30, 1), (35, 1)],
                 },
                 MetricSnapshot {
                     name: "mem/used".to_string(),
@@ -76,7 +76,7 @@ mod tests {
                     unit: Unit::Bytes,
                     labels: Labels::new(),
                     raw: 1024,
-                    percentiles: vec![(50.0, 900), (90.0, 1000), (99.0, 1020), (99.9, 1024)],
+                    buckets: vec![(900, 5), (1000, 3), (1020, 1), (1024, 1)],
                 },
             ],
         }

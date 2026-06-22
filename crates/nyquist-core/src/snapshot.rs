@@ -21,7 +21,6 @@ pub struct RegistrySnapshot {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::model::Kind;
     use crate::registry::{MetricDef, Registry};
     use std::time::{Duration, Instant};
