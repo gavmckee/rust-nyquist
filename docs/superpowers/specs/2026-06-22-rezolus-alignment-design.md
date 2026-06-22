@@ -145,9 +145,11 @@ directory containing `mod.bpf.c`, `mod.rs`, and `stats.rs`, mirroring rezolus's
     onto the consumer-driven read path in this spec, but **retains its current
     pre-computed percentile-column schema** (`p50/p90/p99/p99_9`). Switching it
     to store full H2 bucket arrays (`List<UInt64>`), per rezolus principle 9, is
-    deferred to the follow-on recorder spec (§6.6). This is the one place the
-    foundation knowingly diverges from "distributions over summaries," and it is
-    tracked, not silent.
+    deferred to the follow-on recorder spec (§6.6). This is the one place in the
+    foundation's **durable record** that knowingly stores summaries instead of
+    the full distribution; the export sinks (VM/CH) likewise emit scalar
+    percentiles, but their native-histogram storage is a separate non-goal
+    (§2). The deviation is tracked, not silent.
 - **Histograms exposed as full H2 bucket arrays.** `MetricSnapshot` gains a
   bucket-array representation for distribution metrics. **Percentile computation
   moves out of `Registry` into a shared helper invoked by each sink at read
@@ -271,7 +273,16 @@ follow-on spec:
   `List<UInt64>` for distribution metrics, alongside raw `UInt64`/`Int64` columns
   for counters/gauges and the `timestamp`/`duration` columns. This preserves the
   full distribution in the durable record so any percentile/window can be
-  computed later (rezolus principle 9).
+  computed later (rezolus principle 9). The follow-on spec must resolve two
+  representation details the foundation leaves open:
+  - **Persist the histogram config.** Stored bucket arrays are uninterpretable
+    without the `grouping_power` / `max_value_power` they were built with (the
+    windowed path uses `7`; the in-kernel BPF path uses `3`). Persist these
+    per-row or per-file, or "compute any percentile later" does not hold.
+  - **Pick a bucket encoding.** The foundation's `MetricSnapshot.buckets` is a
+    *sparse* `(upper_bound, count)` pair list, which a single `List<UInt64>`
+    cannot carry. Choose either two parallel lists (`bounds` + `counts`) or a
+    dense index-positional count array plus the config above.
 - **Coverage parity.** The recorder follow-on is itself subject to the §6 parity
   gate: every metric currently written to parquet must still be present
   (gaining bucket-array fidelity, not losing rows).
