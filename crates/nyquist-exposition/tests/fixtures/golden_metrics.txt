@@ -1,0 +1,29 @@
+# GOLDEN BASELINE — replace with a live Linux /metrics capture (scripts/capture-golden-baseline.sh)
+# Seed set of statically-known base metric families so the parity gate runs on
+# any platform. The real baseline (incl. dynamic per-CPU / per-field families)
+# is captured on Linux before any procfs sampler is retired (design §6.2).
+# TYPE cpu_usage counter
+cpu_usage{cpu="0",state="user"} 0
+cpu_usage_rate{cpu="0",state="user",percentile="99"} 0
+# TYPE cpu_load gauge
+cpu_load{window="1"} 0
+# TYPE memory_MemFree gauge
+memory_MemFree{} 0
+# TYPE memory_MemTotal gauge
+memory_MemTotal{} 0
+# TYPE network_receive_bytes counter
+network_receive_bytes{iface="eth0"} 0
+# TYPE network_transmit_bytes counter
+network_transmit_bytes{iface="eth0"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="sda"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="sda"} 0
+# TYPE psi_cpu_some_avg10 gauge
+psi_cpu_some_avg10{} 0
+# TYPE softirq_TIMER counter
+softirq_TIMER{} 0
+# TYPE tcp_rtt_us gauge
+tcp_rtt_us{port="443"} 0
+# TYPE tcp_retransmits counter
+tcp_retransmits{port="443"} 0
