@@ -1,0 +1,3348 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0,211,255,1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [
+    "nyquist",
+    "system",
+    "networking"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nyquist \u2014 VictoriaMetrics",
+  "uid": "nyquist-victoriametrics",
+  "version": 1,
+  "weekStart": "",
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "lo|veth.*|br-.*|docker.*",
+          "value": "lo|veth.*|br-.*|docker.*"
+        },
+        "includeAll": false,
+        "label": "Interface regex exclude",
+        "name": "iface_filter",
+        "options": [],
+        "query": "lo|veth.*|br-.*|docker.*",
+        "type": "custom",
+        "valuesFormat": "csv"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "nyquist-victoriametrics"
+        },
+        "definition": "label_values(nic_queue_rx_packets_rate, iface)",
+        "includeAll": false,
+        "label": "NIC interface",
+        "name": "nic_iface",
+        "options": [],
+        "query": "label_values(nic_queue_rx_packets_rate, iface)",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 44,
+      "panels": [],
+      "title": "System Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "(avg(cpu_usage_user_rate{percentile=\"99\"}) + avg(cpu_usage_system_rate{percentile=\"99\"}) + avg(cpu_usage_softirq_rate{percentile=\"99\"}) + avg(cpu_usage_irq_rate{percentile=\"99\"})) / 1e7",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "CPU non-idle %"
+        }
+      ],
+      "title": "CPU non-idle p99",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "100 * (1 - avg(memory_memavailable_value{percentile=\"50\"}) / avg(memory_memtotal_value{percentile=\"50\"}))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Memory used %"
+        }
+      ],
+      "title": "Memory used %",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "cpu_load_load1_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "load1"
+        }
+      ],
+      "title": "Load avg 1m",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 10000
+              },
+              {
+                "color": "red",
+                "value": 50000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "net_sockets_tcp_inuse_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "in-use"
+        }
+      ],
+      "title": "TCP sockets in-use",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 500000
+              },
+              {
+                "color": "red",
+                "value": 2000000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "description": "perf sampler disabled \u2014 no data",
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "perf_sw_context_switches_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "ctx_sw/s"
+        }
+      ],
+      "title": "Context switches/s p99 [perf off]",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_fast_rate{percentile=\"99\"} + tcp_retrans_slow_start_rate{percentile=\"99\"} + tcp_retrans_syn_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "retransmits/s"
+        }
+      ],
+      "title": "TCP retransmits/s p99",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 45,
+      "panels": [],
+      "title": "Network Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "network_receive_bytes_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "RX throughput p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "network_transmit_bytes_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "TX throughput p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 46,
+      "panels": [],
+      "title": "Network Errors & Drops",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "network_receive_dropped_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "RX drops/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "network_transmit_dropped_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "TX drops/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_net_rx_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "NET_RX"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_net_tx_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "NET_TX"
+        }
+      ],
+      "title": "NET softirqs/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 47,
+      "panels": [],
+      "title": "TCP Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "\u00b5s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_rtt_us_rate{percentile=\"50\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_rtt_us_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "p99"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_rtt_us_rate{percentile=\"99.9\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "p99.9"
+        }
+      ],
+      "title": "TCP RTT \u00b5s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_fast_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "fast"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_slow_start_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "slow_start"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_syn_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "syn"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_spurious_rto_rate{percentile=\"99\"}",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "legendFormat": "spurious_rto"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_retrans_fail_rate{percentile=\"99\"}",
+          "refId": "E",
+          "instant": false,
+          "range": true,
+          "legendFormat": "fail"
+        }
+      ],
+      "title": "Retransmit types/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 48,
+      "panels": [],
+      "title": "TCP Deep Dive",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 33
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_window_zero_sent_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "zero_wnd_sent"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_window_zero_recv_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "zero_wnd_recv"
+        }
+      ],
+      "title": "TCP window pressure/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 33
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_drop_backlog_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "drop_backlog"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_drop_rcvq_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "drop_rcvq"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_drop_ofo_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "drop_ofo"
+        }
+      ],
+      "title": "TCP drop events/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 33
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_ofo_queued_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "ofo_queued"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_ofo_merged_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "ofo_merged"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_dsack_recv_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "dsack_recv"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_dsack_old_sent_rate{percentile=\"99\"}",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "legendFormat": "dsack_old_sent"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_mem_pressure_events_rate{percentile=\"99\"}",
+          "refId": "E",
+          "instant": false,
+          "range": true,
+          "legendFormat": "mem_pressure"
+        }
+      ],
+      "title": "TCP OFO queue & DSACK/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 49,
+      "panels": [],
+      "title": "TCP Opens & Aborts",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 42
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_active_opens_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "active"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_passive_opens_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "passive"
+        }
+      ],
+      "title": "TCP connection opens/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 42
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_abort_timeout_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "timeout"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_abort_close_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "close"
+        }
+      ],
+      "title": "TCP aborts/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 42
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "net_sockets_tcp_tw_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TIME_WAIT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "net_sockets_tcp_orphan_value{percentile=\"50\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "orphaned"
+        }
+      ],
+      "title": "TCP TIME_WAIT / orphaned",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 50,
+      "panels": [],
+      "title": "IP Fragmentation & PMTUD",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_frag_failures_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "frag_failures"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_reasm_failures_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "reasm_failures"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_reasm_requests_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "reasm_requests"
+        }
+      ],
+      "title": "IP fragmentation failures/s (PMTUD signal)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "icmp_in_dest_unreachable_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "in_unreach"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "icmp_out_dest_unreachable_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "out_unreach"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "icmp_in_time_exceeded_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "in_time_exceeded"
+        }
+      ],
+      "title": "ICMP unreachables/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_in_discards_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "in_discards"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_out_discards_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "out_discards"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_out_no_routes_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "out_no_routes"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "ip_in_hdr_errors_rate{percentile=\"99\"}",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "legendFormat": "in_hdr_errors"
+        }
+      ],
+      "title": "IP discards & routing errors/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      },
+      "id": 51,
+      "panels": [],
+      "title": "CPU & Perf Counters",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 60
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "avg(cpu_usage_user_rate{percentile=\"99\"}) / 1e7",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "user"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "avg(cpu_usage_system_rate{percentile=\"99\"}) / 1e7",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "system"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "avg(cpu_usage_softirq_rate{percentile=\"99\"}) / 1e7",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "softirq"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "avg(cpu_usage_irq_rate{percentile=\"99\"}) / 1e7",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "legendFormat": "irq"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "avg(cpu_usage_iowait_rate{percentile=\"99\"}) / 1e7",
+          "refId": "E",
+          "instant": false,
+          "range": true,
+          "legendFormat": "iowait"
+        }
+      ],
+      "title": "CPU usage by type \u2014 average across CPUs p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 60
+      },
+      "id": 24,
+      "description": "perf sampler disabled \u2014 no data",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "perf_hw_instructions_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "instructions"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "perf_hw_branch_misses_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "branch_misses"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "perf_hw_cache_misses_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "cache_misses"
+        }
+      ],
+      "title": "Instructions & branch misses/s p99 [perf off]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "sum(tcp_retransmits_rate{percentile=\"99\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "retransmits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "max(tcp_rtt_us_rate{percentile=\"99\"})",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "rtt_us"
+        }
+      ],
+      "title": "BPF TCP retransmits + RTT p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "id": 52,
+      "panels": [],
+      "title": "Pressure Indicators (PSI)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 69
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_cpu_some_avg10_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_cpu_full_avg10_value{percentile=\"50\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "full_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_cpu_some_avg60_value{percentile=\"50\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_60s"
+        }
+      ],
+      "title": "CPU pressure %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 69
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_memory_some_avg10_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_memory_full_avg10_value{percentile=\"50\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "full_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_memory_some_avg60_value{percentile=\"50\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_60s"
+        }
+      ],
+      "title": "Memory pressure %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 69
+      },
+      "id": 28,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_io_some_avg10_value{percentile=\"50\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_io_full_avg10_value{percentile=\"50\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "full_10s"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "psi_io_some_avg60_value{percentile=\"50\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "some_60s"
+        }
+      ],
+      "title": "I/O pressure %",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      },
+      "id": 53,
+      "panels": [],
+      "title": "Disk & Softirqs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 78
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "disk_read_bytes_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{device}} read"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "disk_write_bytes_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{device}} write"
+        }
+      ],
+      "title": "Disk I/O p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 78
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_net_rx_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "NET_RX"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_net_tx_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "NET_TX"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_sched_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "SCHED"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_rcu_rate{percentile=\"99\"}",
+          "refId": "D",
+          "instant": false,
+          "range": true,
+          "legendFormat": "RCU"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_timer_rate{percentile=\"99\"}",
+          "refId": "E",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TIMER"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "softirq_block_rate{percentile=\"99\"}",
+          "refId": "F",
+          "instant": false,
+          "range": true,
+          "legendFormat": "BLOCK"
+        }
+      ],
+      "title": "Softirqs/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "id": 31,
+      "panels": [],
+      "title": "NIC Ring & RSS",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 87
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_rx_missed_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "NIC ring overflows/s p99 (rx_missed)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 87
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_driver_rx_out_of_buffer_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}}"
+        }
+      ],
+      "title": "mlx5 rx_out_of_buffer/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 87
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_rss_cv_value{percentile=\"50\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_rss_cv_value{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} p99"
+        }
+      ],
+      "title": "RSS imbalance CV % (0=balanced, 100=one queue dominant)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 95
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "tcp_ofo_queued_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "ofo_queued"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_rx_missed_rate{percentile=\"99\",iface=~\"ens1f.*\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} rx_missed"
+        }
+      ],
+      "title": "OFO queue vs NIC drops \u2014 causal correlation",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 95
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_driver_rx_steer_missed_packets_rate{percentile=\"99\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} steer_miss"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_driver_rx_discards_phy_rate{percentile=\"99\"}",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} discards_phy"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_driver_rx_crc_errors_phy_rate{percentile=\"99\"}",
+          "refId": "C",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{iface}} crc_errors"
+        }
+      ],
+      "title": "mlx5 steer_miss / discards_phy / CRC errors/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 103
+      },
+      "id": 37,
+      "panels": [],
+      "title": "RSS Queue Distribution",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "id": 38,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "min": 0,
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 64
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisLabel": "Queue",
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "Queue activity heatmap \u2014 packets/s per queue over time",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 114
+      },
+      "id": 39,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "Current queue load \u2014 ranked (p99 packets/s, last value)",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 114
+      },
+      "id": 40,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.97,
+        "fillOpacity": 80,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"} > 0",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}} p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"} > 0",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}} p99"
+        }
+      ],
+      "title": "p50 vs p99 per queue \u2014 burst headroom per queue",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 128
+      },
+      "id": 41,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"} > 0",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "Traffic share by queue \u2014 % of total RX packets/s (p99)",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 128
+      },
+      "id": 42,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "100 * nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"} / on(iface, percentile) group_left() sum by(iface, percentile)(nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"})",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "Normalised queue share % over time \u2014 does distribution shift?",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 138
+      },
+      "id": 43,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-red",
+          "min": 0,
+          "mode": "scheme",
+          "scheme": "Reds",
+          "steps": 64
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisLabel": "Queue",
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_rx_buff_alloc_err_rate{percentile=\"99\",iface=\"$nic_iface\"}",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "Per-queue ring overflow heatmap \u2014 buff_alloc_err/s",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "heatmap"
+    }
+  ]
+}
