@@ -1,0 +1,3185 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0,211,255,1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "nyquist-clickhouse"
+        },
+        "enable": true,
+        "format": 1,
+        "hide": false,
+        "iconColor": "#FF9830",
+        "name": "sysconfig changes",
+        "rawSql": "SELECT ts as time, note as text, key as tags FROM nyquist_live.sysconfig_changes WHERE $__timeFilter(ts) ORDER BY ts"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [
+    "nyquist",
+    "system",
+    "networking"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nyquist \u2014 ClickHouse",
+  "uid": "nyquist-clickhouse",
+  "version": 8,
+  "weekStart": "",
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "lo|veth.*|br-.*|docker.*",
+          "value": "lo|veth.*|br-.*|docker.*"
+        },
+        "includeAll": false,
+        "label": "Interface regex exclude",
+        "name": "iface_filter",
+        "options": [],
+        "query": "lo|veth.*|br-.*|docker.*",
+        "type": "custom",
+        "valuesFormat": "csv"
+      },
+      {
+        "current": {
+          "text": "ens1f0np0",
+          "value": "ens1f0np0"
+        },
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "nyquist-clickhouse"
+        },
+        "definition": "SELECT DISTINCT tags['iface'] as iface FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' ORDER BY iface",
+        "includeAll": false,
+        "label": "NIC interface",
+        "name": "nic_iface",
+        "options": [],
+        "query": "SELECT DISTINCT tags['iface'] as iface FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' ORDER BY iface",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 44,
+      "panels": [],
+      "title": "System Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, (sumIf(p99,name='cpu_usage_user')+sumIf(p99,name='cpu_usage_system')+sumIf(p99,name='cpu_usage_softirq')+sumIf(p99,name='cpu_usage_irq')) / (countIf(name='cpu_usage_user') * 1e7) as \"CPU non-idle %\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq') AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU non-idle p99",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, 100*(1-sumIf(p50,name='memory_memavailable')/nullIf(sumIf(p50,name='memory_memtotal'),0)) as \"Memory used %\" FROM nyquist_live.samples WHERE name IN ('memory_memavailable','memory_memtotal') AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory used %",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"load1\" FROM nyquist_live.samples WHERE name='cpu_load_load1' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Load avg 1m",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 10000
+              },
+              {
+                "color": "red",
+                "value": 50000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"in-use\" FROM nyquist_live.samples WHERE name='net_sockets_tcp_inuse' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "TCP sockets in-use",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 500000
+              },
+              {
+                "color": "red",
+                "value": 2000000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "description": "perf sampler disabled \u2014 no data",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"ctx_sw/s\" FROM nyquist_live.samples WHERE name='perf_sw_context_switches' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Context switches/s p99 [perf off]",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, sumIf(p99,name='tcp_retrans_fast')+sumIf(p99,name='tcp_retrans_slow_start')+sumIf(p99,name='tcp_retrans_syn') as \"retransmits/s\" FROM nyquist_live.samples WHERE name IN ('tcp_retrans_fast','tcp_retrans_slow_start','tcp_retrans_syn') AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "TCP retransmits/s p99",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 45,
+      "panels": [],
+      "title": "Network Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='network_receive_bytes' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "RX throughput p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='network_transmit_bytes' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "TX throughput p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 46,
+      "panels": [],
+      "title": "Network Errors & Drops",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='network_receive_dropped' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "RX drops/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='network_transmit_dropped' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "TX drops/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"NET_RX\" FROM nyquist_live.samples WHERE name='softirq_net_rx' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"NET_TX\" FROM nyquist_live.samples WHERE name='softirq_net_tx' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "NET softirqs/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 47,
+      "panels": [],
+      "title": "TCP Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "\u00b5s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"p50\" FROM nyquist_live.samples WHERE name='tcp_rtt_us' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"p99\" FROM nyquist_live.samples WHERE name='tcp_rtt_us' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p999 as \"p99.9\" FROM nyquist_live.samples WHERE name='tcp_rtt_us' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "TCP RTT \u00b5s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"fast\" FROM nyquist_live.samples WHERE name='tcp_retrans_fast' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"slow_start\" FROM nyquist_live.samples WHERE name='tcp_retrans_slow_start' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"syn\" FROM nyquist_live.samples WHERE name='tcp_retrans_syn' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"spurious_rto\" FROM nyquist_live.samples WHERE name='tcp_retrans_spurious_rto' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"fail\" FROM nyquist_live.samples WHERE name='tcp_retrans_fail' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "E"
+        }
+      ],
+      "title": "Retransmit types/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 48,
+      "panels": [],
+      "title": "TCP Deep Dive",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 33
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"zero_wnd_sent\" FROM nyquist_live.samples WHERE name='tcp_window_zero_sent' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"zero_wnd_recv\" FROM nyquist_live.samples WHERE name='tcp_window_zero_recv' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "TCP window pressure/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 33
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"drop_backlog\" FROM nyquist_live.samples WHERE name='tcp_drop_backlog' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"drop_rcvq\" FROM nyquist_live.samples WHERE name='tcp_drop_rcvq' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"drop_ofo\" FROM nyquist_live.samples WHERE name='tcp_drop_ofo' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "TCP drop events/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 33
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"ofo_queued\" FROM nyquist_live.samples WHERE name='tcp_ofo_queued' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"ofo_merged\" FROM nyquist_live.samples WHERE name='tcp_ofo_merged' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"dsack_recv\" FROM nyquist_live.samples WHERE name='tcp_dsack_recv' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"dsack_old_sent\" FROM nyquist_live.samples WHERE name='tcp_dsack_old_sent' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"mem_pressure\" FROM nyquist_live.samples WHERE name='tcp_mem_pressure_events' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "E"
+        }
+      ],
+      "title": "TCP OFO queue & DSACK/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 49,
+      "panels": [],
+      "title": "TCP Opens & Aborts",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 42
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"active\" FROM nyquist_live.samples WHERE name='tcp_active_opens' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"passive\" FROM nyquist_live.samples WHERE name='tcp_passive_opens' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "TCP connection opens/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 42
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"timeout\" FROM nyquist_live.samples WHERE name='tcp_abort_timeout' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"close\" FROM nyquist_live.samples WHERE name='tcp_abort_close' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "TCP aborts/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 42
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"TIME_WAIT\" FROM nyquist_live.samples WHERE name='net_sockets_tcp_tw' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"orphaned\" FROM nyquist_live.samples WHERE name='net_sockets_tcp_orphan' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "TCP TIME_WAIT / orphaned",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 50,
+      "panels": [],
+      "title": "IP Fragmentation & PMTUD",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"frag_failures\" FROM nyquist_live.samples WHERE name='ip_frag_failures' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"reasm_failures\" FROM nyquist_live.samples WHERE name='ip_reasm_failures' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"reasm_requests\" FROM nyquist_live.samples WHERE name='ip_reasm_requests' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "IP fragmentation failures/s (PMTUD signal)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"in_unreach\" FROM nyquist_live.samples WHERE name='icmp_in_dest_unreachable' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"out_unreach\" FROM nyquist_live.samples WHERE name='icmp_out_dest_unreachable' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"in_time_exceeded\" FROM nyquist_live.samples WHERE name='icmp_in_time_exceeded' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "ICMP unreachables/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"in_discards\" FROM nyquist_live.samples WHERE name='ip_in_discards' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"out_discards\" FROM nyquist_live.samples WHERE name='ip_out_discards' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"out_no_routes\" FROM nyquist_live.samples WHERE name='ip_out_no_routes' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"in_hdr_errors\" FROM nyquist_live.samples WHERE name='ip_in_hdr_errors' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "D"
+        }
+      ],
+      "title": "IP discards & routing errors/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      },
+      "id": 51,
+      "panels": [],
+      "title": "CPU & Perf Counters",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 60
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"user\" FROM nyquist_live.samples WHERE name='cpu_usage_user' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"system\" FROM nyquist_live.samples WHERE name='cpu_usage_system' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"softirq\" FROM nyquist_live.samples WHERE name='cpu_usage_softirq' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"irq\" FROM nyquist_live.samples WHERE name='cpu_usage_irq' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"iowait\" FROM nyquist_live.samples WHERE name='cpu_usage_iowait' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "E"
+        }
+      ],
+      "title": "CPU usage by type \u2014 average across CPUs p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 60
+      },
+      "id": 24,
+      "description": "perf sampler disabled \u2014 no data",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"instructions\" FROM nyquist_live.samples WHERE name='perf_hw_instructions' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"branch_misses\" FROM nyquist_live.samples WHERE name='perf_hw_branch_misses' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"cache_misses\" FROM nyquist_live.samples WHERE name='perf_hw_cache_misses' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "Instructions & branch misses/s p99 [perf off]",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, sum(p99) as \"retransmits\" FROM nyquist_live.samples WHERE name='tcp_retransmits' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, max(p99) as \"rtt_us\" FROM nyquist_live.samples WHERE name='tcp_rtt_us' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "BPF TCP retransmits + RTT p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "id": 52,
+      "panels": [],
+      "title": "Pressure Indicators (PSI)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 69
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "CPU pressure %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 69
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_memory_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "Memory pressure %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 69
+      },
+      "id": 28,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_io_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "I/O pressure %",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      },
+      "id": 53,
+      "panels": [],
+      "title": "Disk & Softirqs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 78
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['device'] as device, p99 as \"read_Bps\" FROM nyquist_live.samples WHERE name='disk_read_bytes' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['device'] as device, p99 as \"write_Bps\" FROM nyquist_live.samples WHERE name='disk_write_bytes' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "Disk I/O p99 \u2014 bytes/s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 78
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"NET_RX\" FROM nyquist_live.samples WHERE name='softirq_net_rx' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"NET_TX\" FROM nyquist_live.samples WHERE name='softirq_net_tx' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"SCHED\" FROM nyquist_live.samples WHERE name='softirq_sched' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"RCU\" FROM nyquist_live.samples WHERE name='softirq_rcu' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"TIMER\" FROM nyquist_live.samples WHERE name='softirq_timer' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"BLOCK\" FROM nyquist_live.samples WHERE name='softirq_block' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "F"
+        }
+      ],
+      "title": "Softirqs/s p99",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "id": 31,
+      "panels": [],
+      "title": "NIC Ring & RSS",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 87
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='nic_rx_missed' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "NIC ring overflows/s p99 (rx_missed)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 87
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='nic_driver_rx_out_of_buffer' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "mlx5 rx_out_of_buffer/s p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 87
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p50 FROM nyquist_live.samples WHERE name='nic_rss_cv' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='nic_rss_cv' AND NOT match(tags['iface'],'^(lo|veth|br-|docker|virbr)') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "RSS imbalance CV % (0=balanced, 100=one queue dominant)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 95
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, p99 as \"ofo_queued\" FROM nyquist_live.samples WHERE name='tcp_ofo_queued' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 FROM nyquist_live.samples WHERE name='nic_rx_missed' AND match(tags['iface'],'^ens1f') AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "OFO queue vs NIC drops \u2014 causal correlation",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 95
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 as \"steer_miss\" FROM nyquist_live.samples WHERE name='nic_driver_rx_steer_missed_packets' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 as \"discards_phy\" FROM nyquist_live.samples WHERE name='nic_driver_rx_discards_phy' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['iface'] as iface, p99 as \"crc_errors\" FROM nyquist_live.samples WHERE name='nic_driver_rx_crc_errors_phy' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "C"
+        }
+      ],
+      "title": "mlx5 steer_miss / discards_phy / CRC errors/s",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 103
+      },
+      "id": 37,
+      "panels": [],
+      "title": "RSS Queue Distribution",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "id": 38,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "min": 0,
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 64
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisLabel": "Queue",
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p50 FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Queue activity heatmap \u2014 packets/s per queue over time",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 114
+      },
+      "id": 39,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p99 FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Current queue load \u2014 ranked (p99 packets/s, last value)",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 114
+      },
+      "id": 40,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.97,
+        "fillOpacity": 80,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p50 FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) AND p50>0 ORDER BY ts",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p99 FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) AND p99>0 ORDER BY ts",
+          "refId": "B"
+        }
+      ],
+      "title": "p50 vs p99 per queue \u2014 burst headroom per queue",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 128
+      },
+      "id": 41,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p99 FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) AND p99>0 ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Traffic share by queue \u2014 % of total RX packets/s (p99)",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 128
+      },
+      "id": 42,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, 100*p50/sum(p50) OVER (PARTITION BY ts) as share FROM nyquist_live.samples WHERE name='nic_queue_rx_packets' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) AND p50>0 ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Normalised queue share % over time \u2014 does distribution shift?",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "nyquist-clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 138
+      },
+      "id": 43,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-red",
+          "min": 0,
+          "mode": "scheme",
+          "scheme": "Reds",
+          "steps": 64
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisLabel": "Queue",
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "nyquist-clickhouse"
+          },
+          "format": 1,
+          "rawSql": "SELECT ts, tags['queue'] as queue, p99 FROM nyquist_live.samples WHERE name='nic_queue_rx_buff_alloc_err' AND tags['iface']='${nic_iface}' AND $__timeFilter(ts) ORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-queue ring overflow heatmap \u2014 buff_alloc_err/s",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "many"
+          }
+        }
+      ],
+      "type": "heatmap"
+    }
+  ]
+}

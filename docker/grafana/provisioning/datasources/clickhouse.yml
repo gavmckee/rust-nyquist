@@ -11,7 +11,7 @@ datasources:
       host: clickhouse
       port: 9000
       username: default
-      defaultDatabase: nyquist
+      defaultDatabase: nyquist_live
       protocol: native
     secureJsonData:
       password: ""
