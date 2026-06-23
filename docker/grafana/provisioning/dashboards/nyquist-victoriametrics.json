@@ -19,57 +19,6 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [],
-  "preload": false,
-  "refresh": "10s",
-  "schemaVersion": 42,
-  "tags": [
-    "nyquist",
-    "system",
-    "networking"
-  ],
-  "time": {
-    "from": "now-15m",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "nyquist \u2014 VictoriaMetrics",
-  "uid": "nyquist-victoriametrics",
-  "version": 1,
-  "weekStart": "",
-  "templating": {
-    "list": [
-      {
-        "current": {
-          "text": "lo|veth.*|br-.*|docker.*",
-          "value": "lo|veth.*|br-.*|docker.*"
-        },
-        "includeAll": false,
-        "label": "Interface regex exclude",
-        "name": "iface_filter",
-        "options": [],
-        "query": "lo|veth.*|br-.*|docker.*",
-        "type": "custom",
-        "valuesFormat": "csv"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "nyquist-victoriametrics"
-        },
-        "definition": "label_values(nic_queue_rx_packets_rate, iface)",
-        "includeAll": false,
-        "label": "NIC interface",
-        "name": "nic_iface",
-        "options": [],
-        "query": "label_values(nic_queue_rx_packets_rate, iface)",
-        "refresh": 2,
-        "sort": 1,
-        "type": "query"
-      }
-    ]
-  },
   "panels": [
     {
       "collapsed": false,
@@ -147,10 +96,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "(avg(cpu_usage_user_rate{percentile=\"99\"}) + avg(cpu_usage_system_rate{percentile=\"99\"}) + avg(cpu_usage_softirq_rate{percentile=\"99\"}) + avg(cpu_usage_irq_rate{percentile=\"99\"})) / 1e7",
-          "refId": "A",
           "instant": true,
+          "legendFormat": "CPU non-idle %",
           "range": false,
-          "legendFormat": "CPU non-idle %"
+          "refId": "A"
         }
       ],
       "title": "CPU non-idle p99",
@@ -219,10 +168,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "100 * (1 - avg(memory_memavailable_value{percentile=\"50\"}) / avg(memory_memtotal_value{percentile=\"50\"}))",
-          "refId": "A",
           "instant": true,
+          "legendFormat": "Memory used %",
           "range": false,
-          "legendFormat": "Memory used %"
+          "refId": "A"
         }
       ],
       "title": "Memory used %",
@@ -289,10 +238,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "cpu_load_load1_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": true,
+          "legendFormat": "load1",
           "range": false,
-          "legendFormat": "load1"
+          "refId": "A"
         }
       ],
       "title": "Load avg 1m",
@@ -359,10 +308,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "net_sockets_tcp_inuse_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": true,
+          "legendFormat": "in-use",
           "range": false,
-          "legendFormat": "in-use"
+          "refId": "A"
         }
       ],
       "title": "TCP sockets in-use",
@@ -373,6 +322,7 @@
         "type": "prometheus",
         "uid": "nyquist-victoriametrics"
       },
+      "description": "perf sampler disabled \u2014 no data",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -407,7 +357,6 @@
         "y": 1
       },
       "id": 5,
-      "description": "perf sampler disabled \u2014 no data",
       "options": {
         "colorMode": "background",
         "graphMode": "area",
@@ -430,10 +379,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "perf_sw_context_switches_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": true,
+          "legendFormat": "ctx_sw/s",
           "range": false,
-          "legendFormat": "ctx_sw/s"
+          "refId": "A"
         }
       ],
       "title": "Context switches/s p99 [perf off]",
@@ -496,14 +445,12 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "nyquist-victoriametrics"
+            "type": "victoriametrics-datasource",
+            "uid": "nyquist-vm"
           },
-          "expr": "tcp_retrans_fast_rate{percentile=\"99\"} + tcp_retrans_slow_start_rate{percentile=\"99\"} + tcp_retrans_syn_rate{percentile=\"99\"}",
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "legendFormat": "retransmits/s"
+          "expr": "tcp_retrans_segs_rate{percentile=\"99\"}",
+          "legendFormat": "retransmits/s",
+          "refId": "A"
         }
       ],
       "title": "TCP retransmits/s p99",
@@ -549,7 +496,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 15
       },
       "id": 7,
       "options": {
@@ -574,10 +521,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "network_receive_bytes_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "RX throughput p99 \u2014 bytes/s",
@@ -610,7 +557,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 15
       },
       "id": 8,
       "options": {
@@ -635,10 +582,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "network_transmit_bytes_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "TX throughput p99 \u2014 bytes/s",
@@ -650,7 +597,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 23
       },
       "id": 46,
       "panels": [],
@@ -684,7 +631,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 15
+        "y": 24
       },
       "id": 9,
       "options": {
@@ -709,10 +656,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "network_receive_dropped_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "RX drops/s p99",
@@ -745,7 +692,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 15
+        "y": 24
       },
       "id": 10,
       "options": {
@@ -770,10 +717,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "network_transmit_dropped_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "TX drops/s p99",
@@ -806,7 +753,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 15
+        "y": 24
       },
       "id": 11,
       "options": {
@@ -831,10 +778,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_net_rx_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "NET_RX",
           "range": true,
-          "legendFormat": "NET_RX"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -842,10 +789,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_net_tx_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "NET_TX",
           "range": true,
-          "legendFormat": "NET_TX"
+          "refId": "B"
         }
       ],
       "title": "NET softirqs/s p99",
@@ -857,7 +804,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 32
       },
       "id": 47,
       "panels": [],
@@ -891,7 +838,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 33
       },
       "id": 12,
       "options": {
@@ -916,10 +863,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_rtt_us_rate{percentile=\"50\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "p50",
           "range": true,
-          "legendFormat": "p50"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -927,10 +874,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_rtt_us_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "p99",
           "range": true,
-          "legendFormat": "p99"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -938,10 +885,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_rtt_us_rate{percentile=\"99.9\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "p99.9",
           "range": true,
-          "legendFormat": "p99.9"
+          "refId": "C"
         }
       ],
       "title": "TCP RTT \u00b5s",
@@ -974,7 +921,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 33
       },
       "id": 13,
       "options": {
@@ -995,14 +942,23 @@
       "targets": [
         {
           "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "nyquist-vm"
+          },
+          "expr": "tcp_retrans_segs_rate{percentile=\"99\"}",
+          "legendFormat": "total",
+          "refId": "F"
+        },
+        {
+          "datasource": {
             "type": "prometheus",
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_retrans_fast_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "fast",
           "range": true,
-          "legendFormat": "fast"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1010,10 +966,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_retrans_slow_start_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "slow_start",
           "range": true,
-          "legendFormat": "slow_start"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1021,10 +977,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_retrans_syn_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "syn",
           "range": true,
-          "legendFormat": "syn"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1032,10 +988,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_retrans_spurious_rto_rate{percentile=\"99\"}",
-          "refId": "D",
           "instant": false,
+          "legendFormat": "spurious_rto",
           "range": true,
-          "legendFormat": "spurious_rto"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1043,13 +999,13 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_retrans_fail_rate{percentile=\"99\"}",
-          "refId": "E",
           "instant": false,
+          "legendFormat": "fail",
           "range": true,
-          "legendFormat": "fail"
+          "refId": "E"
         }
       ],
-      "title": "Retransmit types/s p99",
+      "title": "Retransmit types/s p99 (total + breakdown)",
       "type": "timeseries"
     },
     {
@@ -1058,7 +1014,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 41
       },
       "id": 48,
       "panels": [],
@@ -1092,7 +1048,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 33
+        "y": 42
       },
       "id": 14,
       "options": {
@@ -1117,10 +1073,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_window_zero_sent_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "zero_wnd_sent",
           "range": true,
-          "legendFormat": "zero_wnd_sent"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1128,10 +1084,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_window_zero_recv_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "zero_wnd_recv",
           "range": true,
-          "legendFormat": "zero_wnd_recv"
+          "refId": "B"
         }
       ],
       "title": "TCP window pressure/s p99",
@@ -1164,7 +1120,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 33
+        "y": 42
       },
       "id": 15,
       "options": {
@@ -1189,10 +1145,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_drop_backlog_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "drop_backlog",
           "range": true,
-          "legendFormat": "drop_backlog"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1200,10 +1156,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_drop_rcvq_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "drop_rcvq",
           "range": true,
-          "legendFormat": "drop_rcvq"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1211,10 +1167,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_drop_ofo_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "drop_ofo",
           "range": true,
-          "legendFormat": "drop_ofo"
+          "refId": "C"
         }
       ],
       "title": "TCP drop events/s p99",
@@ -1247,7 +1203,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 33
+        "y": 42
       },
       "id": 16,
       "options": {
@@ -1272,10 +1228,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_ofo_queued_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "ofo_queued",
           "range": true,
-          "legendFormat": "ofo_queued"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1283,10 +1239,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_ofo_merged_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "ofo_merged",
           "range": true,
-          "legendFormat": "ofo_merged"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1294,10 +1250,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_dsack_recv_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "dsack_recv",
           "range": true,
-          "legendFormat": "dsack_recv"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1305,10 +1261,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_dsack_old_sent_rate{percentile=\"99\"}",
-          "refId": "D",
           "instant": false,
+          "legendFormat": "dsack_old_sent",
           "range": true,
-          "legendFormat": "dsack_old_sent"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1316,10 +1272,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_mem_pressure_events_rate{percentile=\"99\"}",
-          "refId": "E",
           "instant": false,
+          "legendFormat": "mem_pressure",
           "range": true,
-          "legendFormat": "mem_pressure"
+          "refId": "E"
         }
       ],
       "title": "TCP OFO queue & DSACK/s p99",
@@ -1331,7 +1287,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 50
       },
       "id": 49,
       "panels": [],
@@ -1365,7 +1321,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 42
+        "y": 51
       },
       "id": 17,
       "options": {
@@ -1389,10 +1345,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_active_opens_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "active",
           "range": true,
-          "legendFormat": "active"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1400,10 +1356,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_passive_opens_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "passive",
           "range": true,
-          "legendFormat": "passive"
+          "refId": "B"
         }
       ],
       "title": "TCP connection opens/s",
@@ -1436,7 +1392,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 42
+        "y": 51
       },
       "id": 18,
       "options": {
@@ -1460,10 +1416,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_abort_timeout_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "timeout",
           "range": true,
-          "legendFormat": "timeout"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1471,10 +1427,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_abort_close_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "close",
           "range": true,
-          "legendFormat": "close"
+          "refId": "B"
         }
       ],
       "title": "TCP aborts/s",
@@ -1507,7 +1463,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 42
+        "y": 51
       },
       "id": 19,
       "options": {
@@ -1531,10 +1487,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "net_sockets_tcp_tw_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "TIME_WAIT",
           "range": true,
-          "legendFormat": "TIME_WAIT"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1542,10 +1498,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "net_sockets_tcp_orphan_value{percentile=\"50\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "orphaned",
           "range": true,
-          "legendFormat": "orphaned"
+          "refId": "B"
         }
       ],
       "title": "TCP TIME_WAIT / orphaned",
@@ -1557,7 +1513,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 59
       },
       "id": 50,
       "panels": [],
@@ -1591,7 +1547,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 51
+        "y": 60
       },
       "id": 20,
       "options": {
@@ -1615,10 +1571,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_frag_failures_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "frag_failures",
           "range": true,
-          "legendFormat": "frag_failures"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1626,10 +1582,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_reasm_failures_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "reasm_failures",
           "range": true,
-          "legendFormat": "reasm_failures"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1637,10 +1593,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_reasm_requests_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "reasm_requests",
           "range": true,
-          "legendFormat": "reasm_requests"
+          "refId": "C"
         }
       ],
       "title": "IP fragmentation failures/s (PMTUD signal)",
@@ -1673,7 +1629,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 51
+        "y": 60
       },
       "id": 21,
       "options": {
@@ -1697,10 +1653,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "icmp_in_dest_unreachable_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "in_unreach",
           "range": true,
-          "legendFormat": "in_unreach"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1708,10 +1664,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "icmp_out_dest_unreachable_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "out_unreach",
           "range": true,
-          "legendFormat": "out_unreach"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1719,10 +1675,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "icmp_in_time_exceeded_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "in_time_exceeded",
           "range": true,
-          "legendFormat": "in_time_exceeded"
+          "refId": "C"
         }
       ],
       "title": "ICMP unreachables/s",
@@ -1755,7 +1711,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 51
+        "y": 60
       },
       "id": 22,
       "options": {
@@ -1779,10 +1735,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_in_discards_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "in_discards",
           "range": true,
-          "legendFormat": "in_discards"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1790,10 +1746,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_out_discards_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "out_discards",
           "range": true,
-          "legendFormat": "out_discards"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1801,10 +1757,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_out_no_routes_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "out_no_routes",
           "range": true,
-          "legendFormat": "out_no_routes"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1812,10 +1768,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "ip_in_hdr_errors_rate{percentile=\"99\"}",
-          "refId": "D",
           "instant": false,
+          "legendFormat": "in_hdr_errors",
           "range": true,
-          "legendFormat": "in_hdr_errors"
+          "refId": "D"
         }
       ],
       "title": "IP discards & routing errors/s",
@@ -1827,7 +1783,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 68
       },
       "id": 51,
       "panels": [],
@@ -1865,7 +1821,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 60
+        "y": 69
       },
       "id": 23,
       "options": {
@@ -1889,10 +1845,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "avg(cpu_usage_user_rate{percentile=\"99\"}) / 1e7",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "user",
           "range": true,
-          "legendFormat": "user"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1900,10 +1856,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "avg(cpu_usage_system_rate{percentile=\"99\"}) / 1e7",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "system",
           "range": true,
-          "legendFormat": "system"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1911,10 +1867,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "avg(cpu_usage_softirq_rate{percentile=\"99\"}) / 1e7",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "softirq",
           "range": true,
-          "legendFormat": "softirq"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1922,10 +1878,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "avg(cpu_usage_irq_rate{percentile=\"99\"}) / 1e7",
-          "refId": "D",
           "instant": false,
+          "legendFormat": "irq",
           "range": true,
-          "legendFormat": "irq"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1933,10 +1889,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "avg(cpu_usage_iowait_rate{percentile=\"99\"}) / 1e7",
-          "refId": "E",
           "instant": false,
+          "legendFormat": "iowait",
           "range": true,
-          "legendFormat": "iowait"
+          "refId": "E"
         }
       ],
       "title": "CPU usage by type \u2014 average across CPUs p99",
@@ -1947,6 +1903,7 @@
         "type": "prometheus",
         "uid": "nyquist-victoriametrics"
       },
+      "description": "perf sampler disabled \u2014 no data",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1969,10 +1926,9 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 60
+        "y": 69
       },
       "id": 24,
-      "description": "perf sampler disabled \u2014 no data",
       "options": {
         "legend": {
           "calcs": [
@@ -1994,10 +1950,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "perf_hw_instructions_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "instructions",
           "range": true,
-          "legendFormat": "instructions"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2005,10 +1961,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "perf_hw_branch_misses_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "branch_misses",
           "range": true,
-          "legendFormat": "branch_misses"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2016,10 +1972,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "perf_hw_cache_misses_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "cache_misses",
           "range": true,
-          "legendFormat": "cache_misses"
+          "refId": "C"
         }
       ],
       "title": "Instructions & branch misses/s p99 [perf off]",
@@ -2052,7 +2008,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 60
+        "y": 69
       },
       "id": 25,
       "options": {
@@ -2076,10 +2032,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "sum(tcp_retransmits_rate{percentile=\"99\"})",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "retransmits",
           "range": true,
-          "legendFormat": "retransmits"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2087,10 +2043,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "max(tcp_rtt_us_rate{percentile=\"99\"})",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "rtt_us",
           "range": true,
-          "legendFormat": "rtt_us"
+          "refId": "B"
         }
       ],
       "title": "BPF TCP retransmits + RTT p99",
@@ -2102,7 +2058,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 68
+        "y": 77
       },
       "id": 52,
       "panels": [],
@@ -2136,7 +2092,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 69
+        "y": 78
       },
       "id": 26,
       "options": {
@@ -2160,10 +2116,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_cpu_some_avg10_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "some_10s",
           "range": true,
-          "legendFormat": "some_10s"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2171,10 +2127,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_cpu_full_avg10_value{percentile=\"50\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "full_10s",
           "range": true,
-          "legendFormat": "full_10s"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2182,10 +2138,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_cpu_some_avg60_value{percentile=\"50\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "some_60s",
           "range": true,
-          "legendFormat": "some_60s"
+          "refId": "C"
         }
       ],
       "title": "CPU pressure %",
@@ -2218,7 +2174,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 69
+        "y": 78
       },
       "id": 27,
       "options": {
@@ -2242,10 +2198,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_memory_some_avg10_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "some_10s",
           "range": true,
-          "legendFormat": "some_10s"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2253,10 +2209,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_memory_full_avg10_value{percentile=\"50\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "full_10s",
           "range": true,
-          "legendFormat": "full_10s"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2264,10 +2220,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_memory_some_avg60_value{percentile=\"50\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "some_60s",
           "range": true,
-          "legendFormat": "some_60s"
+          "refId": "C"
         }
       ],
       "title": "Memory pressure %",
@@ -2300,7 +2256,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 69
+        "y": 78
       },
       "id": 28,
       "options": {
@@ -2324,10 +2280,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_io_some_avg10_value{percentile=\"50\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "some_10s",
           "range": true,
-          "legendFormat": "some_10s"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2335,10 +2291,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_io_full_avg10_value{percentile=\"50\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "full_10s",
           "range": true,
-          "legendFormat": "full_10s"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2346,10 +2302,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "psi_io_some_avg60_value{percentile=\"50\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "some_60s",
           "range": true,
-          "legendFormat": "some_60s"
+          "refId": "C"
         }
       ],
       "title": "I/O pressure %",
@@ -2361,7 +2317,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 86
       },
       "id": 53,
       "panels": [],
@@ -2395,7 +2351,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 87
       },
       "id": 29,
       "options": {
@@ -2419,10 +2375,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "disk_read_bytes_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{device}} read",
           "range": true,
-          "legendFormat": "{{device}} read"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2430,10 +2386,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "disk_write_bytes_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "{{device}} write",
           "range": true,
-          "legendFormat": "{{device}} write"
+          "refId": "B"
         }
       ],
       "title": "Disk I/O p99 \u2014 bytes/s",
@@ -2466,7 +2422,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 87
       },
       "id": 30,
       "options": {
@@ -2490,10 +2446,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_net_rx_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "NET_RX",
           "range": true,
-          "legendFormat": "NET_RX"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2501,10 +2457,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_net_tx_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "NET_TX",
           "range": true,
-          "legendFormat": "NET_TX"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2512,10 +2468,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_sched_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "SCHED",
           "range": true,
-          "legendFormat": "SCHED"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -2523,10 +2479,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_rcu_rate{percentile=\"99\"}",
-          "refId": "D",
           "instant": false,
+          "legendFormat": "RCU",
           "range": true,
-          "legendFormat": "RCU"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -2534,10 +2490,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_timer_rate{percentile=\"99\"}",
-          "refId": "E",
           "instant": false,
+          "legendFormat": "TIMER",
           "range": true,
-          "legendFormat": "TIMER"
+          "refId": "E"
         },
         {
           "datasource": {
@@ -2545,10 +2501,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "softirq_block_rate{percentile=\"99\"}",
-          "refId": "F",
           "instant": false,
+          "legendFormat": "BLOCK",
           "range": true,
-          "legendFormat": "BLOCK"
+          "refId": "F"
         }
       ],
       "title": "Softirqs/s p99",
@@ -2560,7 +2516,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 95
       },
       "id": 31,
       "panels": [],
@@ -2594,7 +2550,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 87
+        "y": 96
       },
       "id": 32,
       "options": {
@@ -2618,10 +2574,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_rx_missed_rate{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "NIC ring overflows/s p99 (rx_missed)",
@@ -2654,7 +2610,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 87
+        "y": 96
       },
       "id": 33,
       "options": {
@@ -2678,10 +2634,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_driver_rx_out_of_buffer_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}}",
           "range": true,
-          "legendFormat": "{{iface}}"
+          "refId": "A"
         }
       ],
       "title": "mlx5 rx_out_of_buffer/s p99",
@@ -2714,7 +2670,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 87
+        "y": 96
       },
       "id": 34,
       "options": {
@@ -2738,10 +2694,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_rss_cv_value{percentile=\"50\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}} p50",
           "range": true,
-          "legendFormat": "{{iface}} p50"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2749,10 +2705,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_rss_cv_value{percentile=\"99\",iface!~\"lo|veth.*|br-.*|docker.*|virbr.*\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "{{iface}} p99",
           "range": true,
-          "legendFormat": "{{iface}} p99"
+          "refId": "B"
         }
       ],
       "title": "RSS imbalance CV % (0=balanced, 100=one queue dominant)",
@@ -2785,7 +2741,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 95
+        "y": 104
       },
       "id": 35,
       "options": {
@@ -2809,10 +2765,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "tcp_ofo_queued_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "ofo_queued",
           "range": true,
-          "legendFormat": "ofo_queued"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2820,10 +2776,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_rx_missed_rate{percentile=\"99\",iface=~\"ens1f.*\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "{{iface}} rx_missed",
           "range": true,
-          "legendFormat": "{{iface}} rx_missed"
+          "refId": "B"
         }
       ],
       "title": "OFO queue vs NIC drops \u2014 causal correlation",
@@ -2856,7 +2812,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 95
+        "y": 104
       },
       "id": 36,
       "options": {
@@ -2880,10 +2836,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_driver_rx_steer_missed_packets_rate{percentile=\"99\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{iface}} steer_miss",
           "range": true,
-          "legendFormat": "{{iface}} steer_miss"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2891,10 +2847,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_driver_rx_discards_phy_rate{percentile=\"99\"}",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "{{iface}} discards_phy",
           "range": true,
-          "legendFormat": "{{iface}} discards_phy"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -2902,10 +2858,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_driver_rx_crc_errors_phy_rate{percentile=\"99\"}",
-          "refId": "C",
           "instant": false,
+          "legendFormat": "{{iface}} crc_errors",
           "range": true,
-          "legendFormat": "{{iface}} crc_errors"
+          "refId": "C"
         }
       ],
       "title": "mlx5 steer_miss / discards_phy / CRC errors/s",
@@ -2917,7 +2873,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 112
       },
       "id": 37,
       "panels": [],
@@ -2944,7 +2900,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 113
       },
       "id": 38,
       "options": {
@@ -2979,10 +2935,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}}",
           "range": true,
-          "legendFormat": "{{queue}}"
+          "refId": "A"
         }
       ],
       "title": "Queue activity heatmap \u2014 packets/s per queue over time",
@@ -3016,7 +2972,7 @@
         "h": 14,
         "w": 12,
         "x": 0,
-        "y": 114
+        "y": 123
       },
       "id": 39,
       "options": {
@@ -3038,10 +2994,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}}",
           "range": true,
-          "legendFormat": "{{queue}}"
+          "refId": "A"
         }
       ],
       "title": "Current queue load \u2014 ranked (p99 packets/s, last value)",
@@ -3078,7 +3034,7 @@
         "h": 14,
         "w": 12,
         "x": 12,
-        "y": 114
+        "y": 123
       },
       "id": 40,
       "options": {
@@ -3109,10 +3065,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"} > 0",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}} p50",
           "range": true,
-          "legendFormat": "{{queue}} p50"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -3120,10 +3076,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"} > 0",
-          "refId": "B",
           "instant": false,
+          "legendFormat": "{{queue}} p99",
           "range": true,
-          "legendFormat": "{{queue}} p99"
+          "refId": "B"
         }
       ],
       "title": "p50 vs p99 per queue \u2014 burst headroom per queue",
@@ -3155,7 +3111,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 128
+        "y": 137
       },
       "id": 41,
       "options": {
@@ -3185,10 +3141,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_packets_rate{percentile=\"99\",iface=\"$nic_iface\"} > 0",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}}",
           "range": true,
-          "legendFormat": "{{queue}}"
+          "refId": "A"
         }
       ],
       "title": "Traffic share by queue \u2014 % of total RX packets/s (p99)",
@@ -3231,7 +3187,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 128
+        "y": 137
       },
       "id": 42,
       "options": {
@@ -3255,10 +3211,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "100 * nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"} / on(iface, percentile) group_left() sum by(iface, percentile)(nic_queue_rx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"})",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}}",
           "range": true,
-          "legendFormat": "{{queue}}"
+          "refId": "A"
         }
       ],
       "title": "Normalised queue share % over time \u2014 does distribution shift?",
@@ -3292,7 +3248,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 138
+        "y": 147
       },
       "id": 43,
       "options": {
@@ -3327,10 +3283,10 @@
             "uid": "nyquist-victoriametrics"
           },
           "expr": "nic_queue_rx_buff_alloc_err_rate{percentile=\"99\",iface=\"$nic_iface\"}",
-          "refId": "A",
           "instant": false,
+          "legendFormat": "{{queue}}",
           "range": true,
-          "legendFormat": "{{queue}}"
+          "refId": "A"
         }
       ],
       "title": "Per-queue ring overflow heatmap \u2014 buff_alloc_err/s",
@@ -3343,6 +3299,457 @@
         }
       ],
       "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-datasource",
+        "uid": "nyquist-vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "spanNulls": false
+          },
+          "min": null,
+          "unit": "bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TX"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RX"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 54,
+      "options": {
+        "legend": {
+          "calcs": [
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "nyquist-vm"
+          },
+          "expr": "network_receive_bytes_rate{percentile=\"99\", iface=\"$nic_iface\"} * 8",
+          "legendFormat": "RX",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "nyquist-vm"
+          },
+          "expr": "network_transmit_bytes_rate{percentile=\"99\", iface=\"$nic_iface\"} * 8 * -1",
+          "legendFormat": "TX",
+          "refId": "B"
+        }
+      ],
+      "title": "Bandwidth \u2014 $nic_iface",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 155
+      },
+      "id": 55,
+      "panels": [],
+      "title": "TX Queue Distribution (XPS)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 156
+      },
+      "id": 56,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-blue",
+          "min": 0,
+          "mode": "scheme",
+          "scheme": "Blues",
+          "steps": 64
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "yAxis": {
+          "axisLabel": "Queue",
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_packets_rate{percentile=\"50\",iface=\"$nic_iface\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "TX queue activity heatmap \u2014 packets/s per queue over time",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 166
+      },
+      "id": 57,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_bytes_rate{percentile=\"99\",iface=\"$nic_iface\"} * 8",
+          "refId": "A"
+        }
+      ],
+      "title": "Current TX queue load \u2014 ranked (p99 bits/s, last value)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "min": 0,
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 166
+      },
+      "id": 58,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.97,
+        "fillOpacity": 80,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_bytes_rate{percentile=\"50\",iface=\"$nic_iface\"} * 8",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_bytes_rate{percentile=\"99\",iface=\"$nic_iface\"} * 8",
+          "refId": "B"
+        }
+      ],
+      "title": "TX p50 vs p99 per queue \u2014 XPS burst headroom",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 180
+      },
+      "id": 59,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_bytes_rate{percentile=\"99\",iface=\"$nic_iface\"} * 8",
+          "refId": "A"
+        }
+      ],
+      "title": "TX traffic share by queue \u2014 % of total TX bits/s (p99)",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "nyquist-victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 180
+      },
+      "id": 60,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "nyquist-victoriametrics"
+          },
+          "expr": "nic_queue_tx_bytes_rate{percentile=\"50\",iface=\"$nic_iface\"} / ignoring(queue) group_left sum(nic_queue_tx_bytes_rate{percentile=\"50\",iface=\"$nic_iface\"}) * 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Normalised TX queue share % over time \u2014 does XPS distribution shift?",
+      "type": "timeseries"
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [
+    "nyquist",
+    "system",
+    "networking"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "lo|veth.*|br-.*|docker.*",
+          "value": "lo|veth.*|br-.*|docker.*"
+        },
+        "includeAll": false,
+        "label": "Interface regex exclude",
+        "name": "iface_filter",
+        "options": [],
+        "query": "lo|veth.*|br-.*|docker.*",
+        "type": "custom",
+        "valuesFormat": "csv"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "nyquist-victoriametrics"
+        },
+        "definition": "label_values(nic_queue_rx_packets_rate, iface)",
+        "includeAll": false,
+        "label": "NIC interface",
+        "name": "nic_iface",
+        "options": [],
+        "query": "label_values(nic_queue_rx_packets_rate, iface)",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nyquist \u2014 VictoriaMetrics",
+  "uid": "nyquist-victoriametrics",
+  "weekStart": ""
 }

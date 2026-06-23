@@ -30,11 +30,15 @@ const ICMP_METRICS: &[(&str, &str)] = &[
     ("icmp/out_dest_unreachable","OutDestUnreachs"),
 ];
 
-const TCP_METRICS: [(&str, &str); 4] = [
-    ("tcp/active_opens", "ActiveOpens"),
+const TCP_METRICS: [(&str, &str); 5] = [
+    ("tcp/active_opens",  "ActiveOpens"),
     ("tcp/passive_opens", "PassiveOpens"),
-    ("tcp/in_segs", "InSegs"),
-    ("tcp/out_segs", "OutSegs"),
+    ("tcp/in_segs",       "InSegs"),
+    ("tcp/out_segs",      "OutSegs"),
+    // Total retransmitted segments — all types (RTO + fast + SYN).
+    // More inclusive than TCPFastRetrans (SACK-only) and TCPSynRetrans;
+    // correlates with per-socket tcpi_retransmits reported by tools like xfr.
+    ("tcp/retrans/segs",  "RetransSegs"),
 ];
 const UDP_METRICS: [(&str, &str); 6] = [
     ("udp/in_datagrams",   "InDatagrams"),
@@ -113,7 +117,7 @@ mod tests {
         let now = Instant::now();
         ingest(&reg, now, text, "Tcp", &TCP_METRICS);
         ingest(&reg, now, text, "Udp", &UDP_METRICS);
-        assert_eq!(reg.metric_ids().len(), 10);
+        assert_eq!(reg.metric_ids().len(), 11);
     }
 }
 
