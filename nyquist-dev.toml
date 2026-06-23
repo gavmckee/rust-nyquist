@@ -1,19 +1,21 @@
 [general]
-listen = "127.0.0.1:9100"
+listen = "0.0.0.0:9100"
 default_interval = "10ms"
 window = "60s"
 percentiles = [50.0, 90.0, 99.0, 99.9]
 
 [victoria_metrics]
-enabled = false
+enabled = true
 url = "http://localhost:8428"
+push_interval = "10s"
 
 [clickhouse]
-enabled = false
+enabled = true
 url = "http://localhost:18123"
-database = "nyquist"
+database = "nyquist_live"
 username = "default"
-password = ""
+password = "nyquist"
+insert_interval = "10s"
 
 [perf]
 enabled = false
@@ -21,34 +23,23 @@ enabled = false
 [recorder]
 enabled = false
 
-# BPF cpu/usage replaces procfs cpu — disable procfs sampler to avoid scale conflict.
 [samplers.cpu]
-enabled = false
-
-[samplers."cpu/usage"]
 enabled = true
 
-[samplers."cpu/vtime"]
+[samplers.memory]
 enabled = true
 
-# BPF network/traffic replaces procfs network for bytes+dropped per interface.
-# Labels simplified to {iface} only (procfs uses {iface,driver,mtu}).
-# rx_errors/tx_errors not capturable from generic BPF; procfs handles them.
 [samplers.network]
-enabled = false
-
-[samplers."network/traffic"]
 enabled = true
 
-[samplers."tcp/packet_latency"]
-enabled = true
-
-[samplers."tcp/retransmit"]
-enabled = true
-
-# BPF disk/blockio replaces procfs disk for bytes/requests + adds latency histograms.
 [samplers.disk]
-enabled = false
+enabled = true
 
-[samplers."disk/blockio"]
+[samplers.loadavg]
+enabled = true
+
+[samplers.psi]
+enabled = true
+
+[samplers.sockstat]
 enabled = true

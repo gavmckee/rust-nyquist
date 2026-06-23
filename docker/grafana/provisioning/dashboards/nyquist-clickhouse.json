@@ -162,7 +162,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, (sumIf(p99,name='cpu_usage_user')+sumIf(p99,name='cpu_usage_system')+sumIf(p99,name='cpu_usage_softirq')+sumIf(p99,name='cpu_usage_irq')) / (countIf(name='cpu_usage_user') * 1e7) as \"CPU non-idle %\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq') AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, (1 - maxIf(p99,name='cpu_usage_idle') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0)) * 100 as \"CPU non-idle %\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "A"
         }
       ],
@@ -300,7 +300,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"load1\" FROM nyquist_live.samples WHERE name='cpu_load_load1' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"load1\" FROM nyquist_live.samples WHERE name='cpu_load_load1' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         }
       ],
@@ -1812,7 +1812,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"user\" FROM nyquist_live.samples WHERE name='cpu_usage_user' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, maxIf(p99,name='cpu_usage_user') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0) * 100 as \"user\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "A"
         },
         {
@@ -1821,7 +1821,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"system\" FROM nyquist_live.samples WHERE name='cpu_usage_system' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, maxIf(p99,name='cpu_usage_system') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0) * 100 as \"system\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "B"
         },
         {
@@ -1830,7 +1830,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"softirq\" FROM nyquist_live.samples WHERE name='cpu_usage_softirq' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, maxIf(p99,name='cpu_usage_softirq') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0) * 100 as \"softirq\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "C"
         },
         {
@@ -1839,7 +1839,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"irq\" FROM nyquist_live.samples WHERE name='cpu_usage_irq' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, maxIf(p99,name='cpu_usage_irq') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0) * 100 as \"irq\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "D"
         },
         {
@@ -1848,7 +1848,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, avg(p99) / 1e7 as \"iowait\" FROM nyquist_live.samples WHERE name='cpu_usage_iowait' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
+          "rawSql": "SELECT ts, maxIf(p99,name='cpu_usage_iowait') / nullIf(maxIf(p99,name='cpu_usage_idle') + maxIf(p99,name='cpu_usage_user') + maxIf(p99,name='cpu_usage_system') + maxIf(p99,name='cpu_usage_softirq') + maxIf(p99,name='cpu_usage_irq') + maxIf(p99,name='cpu_usage_iowait'),0) * 100 as \"iowait\" FROM nyquist_live.samples WHERE name IN ('cpu_usage_idle','cpu_usage_user','cpu_usage_system','cpu_usage_softirq','cpu_usage_irq','cpu_usage_iowait') AND tags['cpu']='cpu' AND $__timeFilter(ts) GROUP BY ts ORDER BY ts",
           "refId": "E"
         }
       ],
@@ -2063,7 +2063,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         },
         {
@@ -2072,7 +2072,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_cpu_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "B"
         },
         {
@@ -2081,7 +2081,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_cpu_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "C"
         }
       ],
@@ -2139,7 +2139,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         },
         {
@@ -2148,7 +2148,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_memory_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_memory_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "B"
         },
         {
@@ -2157,7 +2157,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_memory_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "C"
         }
       ],
@@ -2215,7 +2215,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_10s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         },
         {
@@ -2224,7 +2224,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_io_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"full_10s\" FROM nyquist_live.samples WHERE name='psi_io_full_avg10' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "B"
         },
         {
@@ -2233,7 +2233,7 @@
             "uid": "nyquist-clickhouse"
           },
           "format": 1,
-          "rawSql": "SELECT ts, p50 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT ts, p50/100.0 as \"some_60s\" FROM nyquist_live.samples WHERE name='psi_io_some_avg60' AND $__timeFilter(ts) ORDER BY ts",
           "refId": "C"
         }
       ],

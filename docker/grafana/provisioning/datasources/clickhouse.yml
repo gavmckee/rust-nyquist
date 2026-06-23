@@ -14,4 +14,4 @@ datasources:
       defaultDatabase: nyquist_live
       protocol: native
     secureJsonData:
-      password: ""
+      password: "nyquist"

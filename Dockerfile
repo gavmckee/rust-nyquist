@@ -5,7 +5,7 @@ WORKDIR /build
 # Dependencies for bpf-linker: needs system LLVM 14 headers to avoid
 # building LLVM from source (which takes 20+ minutes).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    clang llvm-14-dev libelf-dev pkg-config \
+    clang llvm-14-dev libelf-dev libbpf-dev pkg-config make \
     && ln -sf /usr/bin/llvm-config-14 /usr/local/bin/llvm-config \
     && rm -rf /var/lib/apt/lists/*
 
