@@ -27,6 +27,8 @@ struct MetricState {
     window: SlidingHistogram,
     raw: u64,
     prev: Option<(Instant, u64)>,
+    /// BPF path: externally-aggregated bucket array bypasses the windowing engine.
+    direct_buckets: Option<Vec<(u64, u64)>>,
 }
 
 pub struct Registry {
@@ -50,6 +52,7 @@ impl Registry {
                     window: SlidingHistogram::new(self.slice_width, self.window),
                     raw: 0,
                     prev: None,
+                    direct_buckets: None,
                 })
             });
         }
@@ -97,23 +100,31 @@ impl Registry {
         self.metrics.iter().map(|e| *e.key()).collect()
     }
 
-    pub fn snapshot(
-        &self,
-        now: std::time::Instant,
-        percentiles: &[f64],
-    ) -> crate::snapshot::RegistrySnapshot {
+    /// Store an externally-aggregated H2 bucket array directly (BPF path, design §3.4).
+    /// Bypasses the windowing engine — these buckets come from the kernel and are exposed as-is.
+    pub fn record_distribution_buckets(&self, id: MetricId, buckets: Vec<(u64, u64)>) {
+        if let Some(state) = self.metrics.get(&id) {
+            let mut s = state.lock().unwrap();
+            s.raw = buckets.iter().map(|&(_, c)| c).sum();
+            s.direct_buckets = Some(buckets);
+        }
+    }
+
+    pub fn snapshot(&self, now: std::time::Instant) -> crate::snapshot::RegistrySnapshot {
         let mut metrics = Vec::new();
         for entry in self.metrics.iter() {
             let mut s = entry.value().lock().unwrap();
-            let pct_vals = s.window.percentile_batch(now, percentiles);
-            let pcts = percentiles.iter().copied().zip(pct_vals).collect();
+            let buckets = match &s.direct_buckets {
+                Some(b) => b.clone(),
+                None => s.window.bucket_counts(now),
+            };
             metrics.push(crate::snapshot::MetricSnapshot {
                 name: s.def.name.clone(),
                 kind: s.def.kind,
                 unit: s.def.unit,
                 labels: s.def.labels.clone(),
                 raw: s.raw,
-                percentiles: pcts,
+                buckets,
             });
         }
         crate::snapshot::RegistrySnapshot { metrics, captured: std::time::SystemTime::now() }
@@ -123,7 +134,7 @@ impl Registry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Kind, Labels};
+    use crate::model::Kind;
     use std::time::{Duration, Instant};
 
     #[test]
@@ -151,6 +162,17 @@ mod tests {
         reg.record_counter(id, t0 + Duration::from_millis(20), 2000);
         reg.record_counter(id, t0 + Duration::from_millis(30), 5); // reset
         assert_eq!(reg.raw(id), 5);
+    }
+
+    #[test]
+    fn direct_buckets_appear_in_snapshot() {
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
+        let id = reg.register(MetricDef::new("tcp/packet_latency", Kind::Distribution));
+        reg.record_distribution_buckets(id, vec![(100, 5), (1000, 2)]);
+        let snap = reg.snapshot(Instant::now());
+        let m = snap.metrics.iter().find(|m| m.name == "tcp/packet_latency").unwrap();
+        assert_eq!(m.buckets, vec![(100, 5), (1000, 2)]);
+        assert_eq!(m.raw, 7);
     }
 
     #[test]

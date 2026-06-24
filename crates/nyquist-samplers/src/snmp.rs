@@ -30,17 +30,23 @@ const ICMP_METRICS: &[(&str, &str)] = &[
     ("icmp/out_dest_unreachable","OutDestUnreachs"),
 ];
 
-const TCP_METRICS: [(&str, &str); 4] = [
-    ("tcp/active_opens", "ActiveOpens"),
+const TCP_METRICS: [(&str, &str); 5] = [
+    ("tcp/active_opens",  "ActiveOpens"),
     ("tcp/passive_opens", "PassiveOpens"),
-    ("tcp/in_segs", "InSegs"),
-    ("tcp/out_segs", "OutSegs"),
+    ("tcp/in_segs",       "InSegs"),
+    ("tcp/out_segs",      "OutSegs"),
+    // Total retransmitted segments — all types (RTO + fast + SYN).
+    // More inclusive than TCPFastRetrans (SACK-only) and TCPSynRetrans;
+    // correlates with per-socket tcpi_retransmits reported by tools like xfr.
+    ("tcp/retrans/segs",  "RetransSegs"),
 ];
-const UDP_METRICS: [(&str, &str); 4] = [
-    ("udp/in_datagrams", "InDatagrams"),
-    ("udp/out_datagrams", "OutDatagrams"),
-    ("udp/in_errors", "InErrors"),
-    ("udp/no_ports", "NoPorts"),
+const UDP_METRICS: [(&str, &str); 6] = [
+    ("udp/in_datagrams",   "InDatagrams"),
+    ("udp/out_datagrams",  "OutDatagrams"),
+    ("udp/in_errors",      "InErrors"),
+    ("udp/no_ports",       "NoPorts"),
+    ("udp/rcvbuf_errors",  "RcvbufErrors"),
+    ("udp/sndbuf_errors",  "SndbufErrors"),
 ];
 
 fn ingest(reg: &Registry, now: Instant, text: &str, proto: &str, metrics: &[(&str, &str)]) {
@@ -111,6 +117,24 @@ mod tests {
         let now = Instant::now();
         ingest(&reg, now, text, "Tcp", &TCP_METRICS);
         ingest(&reg, now, text, "Udp", &UDP_METRICS);
-        assert_eq!(reg.metric_ids().len(), 8);
+        assert_eq!(reg.metric_ids().len(), 11);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static IP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "ip",
+    init: |reg, iv| Box::new(IpSampler::new(reg, iv)),
+};
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static TCP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "tcp",
+    init: |reg, iv| Box::new(TcpSampler::new(reg, iv)),
+};
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static UDP_ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "udp",
+    init: |reg, iv| Box::new(UdpSampler::new(reg, iv)),
+};

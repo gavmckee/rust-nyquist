@@ -1,0 +1,1842 @@
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu14"} 11000000
+cpu_usage_user_rate{cpu="cpu14",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu14",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu14",percentile="99"} 106430463
+cpu_usage_user_rate{cpu="cpu14",percentile="99.9"} 208666623
+# TYPE cpu_load_load1 gauge
+cpu_load_load1 300
+cpu_load_load1_value{percentile="50"} 301
+cpu_load_load1_value{percentile="90"} 301
+cpu_load_load1_value{percentile="99"} 301
+cpu_load_load1_value{percentile="99.9"} 301
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu5"} 137999029
+cpu_usage_user_rate{cpu="cpu5",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu5",percentile="90"} 105381887
+cpu_usage_user_rate{cpu="cpu5",percentile="99"} 285212671
+cpu_usage_user_rate{cpu="cpu5",percentile="99.9"} 387973119
+# TYPE tcp_dsack_ofo_sent counter
+tcp_dsack_ofo_sent 12
+tcp_dsack_ofo_sent_rate{percentile="50"} 0
+tcp_dsack_ofo_sent_rate{percentile="90"} 0
+tcp_dsack_ofo_sent_rate{percentile="99"} 0
+tcp_dsack_ofo_sent_rate{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu6"} 26000000
+cpu_usage_user_rate{cpu="cpu6",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu6",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu6",percentile="99"} 221249535
+cpu_usage_user_rate{cpu="cpu6",percentile="99.9"} 285212671
+# TYPE udp_no_ports counter
+udp_no_ports 206
+udp_no_ports_rate{percentile="50"} 0
+udp_no_ports_rate{percentile="90"} 0
+udp_no_ports_rate{percentile="99"} 0
+udp_no_ports_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="7"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="7",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="7",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="vda"} 32254172160
+disk_write_bytes_rate{device="vda",percentile="50"} 0
+disk_write_bytes_rate{device="vda",percentile="90"} 0
+disk_write_bytes_rate{device="vda",percentile="99"} 0
+disk_write_bytes_rate{device="vda",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="0"} 9010670
+nic_queue_tx_packets_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="0",percentile="99"} 88
+nic_queue_tx_packets_rate{iface="ens3",queue="0",percentile="99.9"} 104
+# TYPE memory_hugepages_rsvd gauge
+memory_hugepages_rsvd 0
+memory_hugepages_rsvd_value{percentile="50"} 0
+memory_hugepages_rsvd_value{percentile="90"} 0
+memory_hugepages_rsvd_value{percentile="99"} 0
+memory_hugepages_rsvd_value{percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="3"} 1961625395
+nic_queue_tx_bytes_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="3",percentile="99"} 19583
+nic_queue_tx_bytes_rate{iface="ens3",queue="3",percentile="99.9"} 20479
+# TYPE psi_cpu_some_avg300 gauge
+psi_cpu_some_avg300 31
+psi_cpu_some_avg300_value{percentile="50"} 31
+psi_cpu_some_avg300_value{percentile="90"} 31
+psi_cpu_some_avg300_value{percentile="99"} 31
+psi_cpu_some_avg300_value{percentile="99.9"} 31
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="9"} 432083005
+nic_queue_tx_bytes_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="vda14"} 942080
+disk_read_bytes_rate{device="vda14",percentile="50"} 0
+disk_read_bytes_rate{device="vda14",percentile="90"} 0
+disk_read_bytes_rate{device="vda14",percentile="99"} 0
+disk_read_bytes_rate{device="vda14",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu12"} 54000000
+cpu_usage_system_rate{cpu="cpu12",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu12",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu12",percentile="99"} 952107007
+cpu_usage_system_rate{cpu="cpu12",percentile="99.9"} 968884223
+# TYPE memory_kreclaimable gauge
+memory_kreclaimable 1027452928
+memory_kreclaimable_value{percentile="50"} 1027604479
+memory_kreclaimable_value{percentile="90"} 1027604479
+memory_kreclaimable_value{percentile="99"} 1027604479
+memory_kreclaimable_value{percentile="99.9"} 1027604479
+# TYPE tcp_retrans_spurious_rto counter
+tcp_retrans_spurious_rto 6
+tcp_retrans_spurious_rto_rate{percentile="50"} 0
+tcp_retrans_spurious_rto_rate{percentile="90"} 0
+tcp_retrans_spurious_rto_rate{percentile="99"} 0
+tcp_retrans_spurious_rto_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="6"} 21130335
+nic_queue_rx_packets_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="6",percentile="99.9"} 164
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="10"} 37524633326
+nic_queue_rx_bytes_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="0"} 10270662353
+nic_queue_tx_bytes_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="0",percentile="99"} 16383
+nic_queue_tx_bytes_rate{iface="ens3",queue="0",percentile="99.9"} 19967
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu15"} 0
+cpu_usage_user_rate{cpu="cpu15",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu15",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu15",percentile="99"} 0
+cpu_usage_user_rate{cpu="cpu15",percentile="99.9"} 0
+# TYPE psi_io_some_avg60 gauge
+psi_io_some_avg60 0
+psi_io_some_avg60_value{percentile="50"} 0
+psi_io_some_avg60_value{percentile="90"} 0
+psi_io_some_avg60_value{percentile="99"} 0
+psi_io_some_avg60_value{percentile="99.9"} 0
+# TYPE ip_frag_ok counter
+ip_frag_ok 0
+ip_frag_ok_rate{percentile="50"} 0
+ip_frag_ok_rate{percentile="90"} 0
+ip_frag_ok_rate{percentile="99"} 0
+ip_frag_ok_rate{percentile="99.9"} 0
+# TYPE psi_cpu_full_avg300 gauge
+psi_cpu_full_avg300 0
+psi_cpu_full_avg300_value{percentile="50"} 0
+psi_cpu_full_avg300_value{percentile="90"} 0
+psi_cpu_full_avg300_value{percentile="99"} 0
+psi_cpu_full_avg300_value{percentile="99.9"} 0
+# TYPE tcp_drop_backlog counter
+tcp_drop_backlog 0
+tcp_drop_backlog_rate{percentile="50"} 0
+tcp_drop_backlog_rate{percentile="90"} 0
+tcp_drop_backlog_rate{percentile="99"} 0
+tcp_drop_backlog_rate{percentile="99.9"} 0
+# TYPE tcp_abort_close counter
+tcp_abort_close 136
+tcp_abort_close_rate{percentile="50"} 0
+tcp_abort_close_rate{percentile="90"} 0
+tcp_abort_close_rate{percentile="99"} 0
+tcp_abort_close_rate{percentile="99.9"} 0
+# TYPE tcp_rtt_us gauge
+tcp_rtt_us{port="9100"} 35
+tcp_rtt_us_value{port="9100",percentile="50"} 21
+tcp_rtt_us_value{port="9100",percentile="90"} 35
+tcp_rtt_us_value{port="9100",percentile="99"} 35
+tcp_rtt_us_value{port="9100",percentile="99.9"} 35
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="2"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="2",percentile="99.9"} 0
+# TYPE memory_swapcached gauge
+memory_swapcached 0
+memory_swapcached_value{percentile="50"} 0
+memory_swapcached_value{percentile="90"} 0
+memory_swapcached_value{percentile="99"} 0
+memory_swapcached_value{percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="4"} 23678613
+nic_queue_rx_packets_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE net_sockets_tcp_orphan gauge
+net_sockets_tcp_orphan 0
+net_sockets_tcp_orphan_value{percentile="50"} 0
+net_sockets_tcp_orphan_value{percentile="90"} 0
+net_sockets_tcp_orphan_value{percentile="99"} 0
+net_sockets_tcp_orphan_value{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu8"} 13000000
+cpu_usage_user_rate{cpu="cpu8",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu8",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu8",percentile="99"} 106430463
+cpu_usage_user_rate{cpu="cpu8",percentile="99.9"} 197132287
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu12"} 0
+cpu_usage_nice_rate{cpu="cpu12",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu12",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu12",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu12",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="4"} 4962082
+nic_queue_tx_packets_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE network_transmit_bytes counter
+network_transmit_bytes{iface="tailscale0"} 0
+network_transmit_bytes_rate{iface="tailscale0",percentile="50"} 0
+network_transmit_bytes_rate{iface="tailscale0",percentile="90"} 0
+network_transmit_bytes_rate{iface="tailscale0",percentile="99"} 0
+network_transmit_bytes_rate{iface="tailscale0",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu7"} 158994772
+cpu_usage_system_rate{cpu="cpu7",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu7",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu7",percentile="99"} 1052770303
+cpu_usage_system_rate{cpu="cpu7",percentile="99.9"} 1069547519
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu9"} 17000000
+cpu_usage_system_rate{cpu="cpu9",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu9",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu9",percentile="99"} 101187583
+cpu_usage_system_rate{cpu="cpu9",percentile="99.9"} 864026623
+# TYPE memory_swaptotal gauge
+memory_swaptotal 0
+memory_swaptotal_value{percentile="50"} 0
+memory_swaptotal_value{percentile="90"} 0
+memory_swaptotal_value{percentile="99"} 0
+memory_swaptotal_value{percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop7"} 0
+disk_write_bytes_rate{device="loop7",percentile="50"} 0
+disk_write_bytes_rate{device="loop7",percentile="90"} 0
+disk_write_bytes_rate{device="loop7",percentile="99"} 0
+disk_write_bytes_rate{device="loop7",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="6"} 3333768747
+nic_queue_tx_bytes_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="6",percentile="99.9"} 9855
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="1"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="1",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="1",percentile="99.9"} 0
+# TYPE udp_in_errors counter
+udp_in_errors 0
+udp_in_errors_rate{percentile="50"} 0
+udp_in_errors_rate{percentile="90"} 0
+udp_in_errors_rate{percentile="99"} 0
+udp_in_errors_rate{percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu2"} 242000000
+cpu_usage_system_rate{cpu="cpu2",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu2",percentile="90"} 102236159
+cpu_usage_system_rate{cpu="cpu2",percentile="99"} 994050047
+cpu_usage_system_rate{cpu="cpu2",percentile="99.9"} 1056964607
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu7"} 0
+cpu_usage_nice_rate{cpu="cpu7",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu7",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu7",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu7",percentile="99.9"} 0
+# TYPE memory_anonpages gauge
+memory_anonpages 567283712
+memory_anonpages_value{percentile="50"} 501219327
+memory_anonpages_value{percentile="90"} 553648127
+memory_anonpages_value{percentile="99"} 566231039
+memory_anonpages_value{percentile="99.9"} 566231039
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="2"} 24882511
+nic_queue_rx_packets_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="2",percentile="99.9"} 0
+# TYPE network_transmit_dropped counter
+network_transmit_dropped{iface="tailscale0"} 0
+network_transmit_dropped_rate{iface="tailscale0",percentile="50"} 0
+network_transmit_dropped_rate{iface="tailscale0",percentile="90"} 0
+network_transmit_dropped_rate{iface="tailscale0",percentile="99"} 0
+network_transmit_dropped_rate{iface="tailscale0",percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="10"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu13"} 1000000
+cpu_usage_user_rate{cpu="cpu13",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu13",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu13",percentile="99"} 0
+cpu_usage_user_rate{cpu="cpu13",percentile="99.9"} 95420415
+# TYPE memory_memtotal gauge
+memory_memtotal 67420532736
+memory_memtotal_value{percentile="50"} 67645734911
+memory_memtotal_value{percentile="90"} 67645734911
+memory_memtotal_value{percentile="99"} 67645734911
+memory_memtotal_value{percentile="99.9"} 67645734911
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="7"} 5659486
+nic_queue_tx_packets_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="7",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="7",percentile="99.9"} 0
+# TYPE ip_reasm_ok counter
+ip_reasm_ok 0
+ip_reasm_ok_rate{percentile="50"} 0
+ip_reasm_ok_rate{percentile="90"} 0
+ip_reasm_ok_rate{percentile="99"} 0
+ip_reasm_ok_rate{percentile="99.9"} 0
+# TYPE nic_rss_cv gauge
+nic_rss_cv{iface="ens3"} 0
+nic_rss_cv_value{iface="ens3",percentile="50"} 0
+nic_rss_cv_value{iface="ens3",percentile="90"} 0
+nic_rss_cv_value{iface="ens3",percentile="99"} 0
+nic_rss_cv_value{iface="ens3",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu13"} 0
+cpu_usage_nice_rate{cpu="cpu13",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu13",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu13",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu13",percentile="99.9"} 0
+# TYPE ip_out_no_routes counter
+ip_out_no_routes 11
+ip_out_no_routes_rate{percentile="50"} 0
+ip_out_no_routes_rate{percentile="90"} 0
+ip_out_no_routes_rate{percentile="99"} 0
+ip_out_no_routes_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="4"} 4325355438
+nic_queue_tx_bytes_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE network_receive_dropped counter
+network_receive_dropped{iface="docker0"} 0
+network_receive_dropped_rate{iface="docker0",percentile="50"} 0
+network_receive_dropped_rate{iface="docker0",percentile="90"} 0
+network_receive_dropped_rate{iface="docker0",percentile="99"} 0
+network_receive_dropped_rate{iface="docker0",percentile="99.9"} 0
+# TYPE icmp_in_dest_unreachable counter
+icmp_in_dest_unreachable 204
+icmp_in_dest_unreachable_rate{percentile="50"} 0
+icmp_in_dest_unreachable_rate{percentile="90"} 0
+icmp_in_dest_unreachable_rate{percentile="99"} 0
+icmp_in_dest_unreachable_rate{percentile="99.9"} 0
+# TYPE nic_driver_tx_discards_phy counter
+nic_driver_tx_discards_phy{iface="ens3"} 0
+nic_driver_tx_discards_phy_rate{iface="ens3",percentile="50"} 0
+nic_driver_tx_discards_phy_rate{iface="ens3",percentile="90"} 0
+nic_driver_tx_discards_phy_rate{iface="ens3",percentile="99"} 0
+nic_driver_tx_discards_phy_rate{iface="ens3",percentile="99.9"} 0
+# TYPE memory_sunreclaim gauge
+memory_sunreclaim 241016832
+memory_sunreclaim_value{percentile="50"} 241172479
+memory_sunreclaim_value{percentile="90"} 241172479
+memory_sunreclaim_value{percentile="99"} 241172479
+memory_sunreclaim_value{percentile="99.9"} 241172479
+# TYPE ip_reasm_failures counter
+ip_reasm_failures 0
+ip_reasm_failures_rate{percentile="50"} 0
+ip_reasm_failures_rate{percentile="90"} 0
+ip_reasm_failures_rate{percentile="99"} 0
+ip_reasm_failures_rate{percentile="99.9"} 0
+# TYPE psi_memory_some_avg10 gauge
+psi_memory_some_avg10 0
+psi_memory_some_avg10_value{percentile="50"} 0
+psi_memory_some_avg10_value{percentile="90"} 0
+psi_memory_some_avg10_value{percentile="99"} 0
+psi_memory_some_avg10_value{percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu5"} 0
+cpu_usage_nice_rate{cpu="cpu5",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu5",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu5",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu5",percentile="99.9"} 0
+# TYPE memory_inactive gauge
+memory_inactive 20745551872
+memory_inactive_value{percentile="50"} 20803747839
+memory_inactive_value{percentile="90"} 20803747839
+memory_inactive_value{percentile="99"} 20803747839
+memory_inactive_value{percentile="99.9"} 20803747839
+# TYPE softirq_hrtimer counter
+softirq_hrtimer 7903
+softirq_hrtimer_rate{percentile="50"} 0
+softirq_hrtimer_rate{percentile="90"} 0
+softirq_hrtimer_rate{percentile="99"} 0
+softirq_hrtimer_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="5"} 2846268
+nic_queue_tx_packets_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="5",percentile="99"} 106
+nic_queue_tx_packets_rate{iface="ens3",queue="5",percentile="99.9"} 192
+# TYPE memory_filehugepages gauge
+memory_filehugepages 0
+memory_filehugepages_value{percentile="50"} 0
+memory_filehugepages_value{percentile="90"} 0
+memory_filehugepages_value{percentile="99"} 0
+memory_filehugepages_value{percentile="99.9"} 0
+# TYPE nic_rx_fifo_errors counter
+nic_rx_fifo_errors{iface="ens3"} 0
+nic_rx_fifo_errors_rate{iface="ens3",percentile="50"} 0
+nic_rx_fifo_errors_rate{iface="ens3",percentile="90"} 0
+nic_rx_fifo_errors_rate{iface="ens3",percentile="99"} 0
+nic_rx_fifo_errors_rate{iface="ens3",percentile="99.9"} 0
+# TYPE tcp_window_zero_recv counter
+tcp_window_zero_recv 0
+tcp_window_zero_recv_rate{percentile="50"} 0
+tcp_window_zero_recv_rate{percentile="90"} 0
+tcp_window_zero_recv_rate{percentile="99"} 0
+tcp_window_zero_recv_rate{percentile="99.9"} 0
+# TYPE memory_hugepages_surp gauge
+memory_hugepages_surp 0
+memory_hugepages_surp_value{percentile="50"} 0
+memory_hugepages_surp_value{percentile="90"} 0
+memory_hugepages_surp_value{percentile="99"} 0
+memory_hugepages_surp_value{percentile="99.9"} 0
+# TYPE nic_rx_frame_errors counter
+nic_rx_frame_errors{iface="ens3"} 0
+nic_rx_frame_errors_rate{iface="ens3",percentile="50"} 0
+nic_rx_frame_errors_rate{iface="ens3",percentile="90"} 0
+nic_rx_frame_errors_rate{iface="ens3",percentile="99"} 0
+nic_rx_frame_errors_rate{iface="ens3",percentile="99.9"} 0
+# TYPE nic_driver_rx_discards_phy counter
+nic_driver_rx_discards_phy{iface="ens3"} 0
+nic_driver_rx_discards_phy_rate{iface="ens3",percentile="50"} 0
+nic_driver_rx_discards_phy_rate{iface="ens3",percentile="90"} 0
+nic_driver_rx_discards_phy_rate{iface="ens3",percentile="99"} 0
+nic_driver_rx_discards_phy_rate{iface="ens3",percentile="99.9"} 0
+# TYPE network_receive_bytes counter
+network_receive_bytes{iface="lo"} 308
+network_receive_bytes_rate{iface="lo",percentile="50"} 0
+network_receive_bytes_rate{iface="lo",percentile="90"} 0
+network_receive_bytes_rate{iface="lo",percentile="99"} 0
+network_receive_bytes_rate{iface="lo",percentile="99.9"} 31103
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu1"} 0
+cpu_usage_nice_rate{cpu="cpu1",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu1",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu1",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu1",percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="0"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="0",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="0",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="8"} 3845556
+nic_queue_tx_packets_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="0"} 24695955
+nic_queue_rx_packets_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="0",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="0",percentile="99.9"} 0
+# TYPE memory_writeback gauge
+memory_writeback 0
+memory_writeback_value{percentile="50"} 0
+memory_writeback_value{percentile="90"} 0
+memory_writeback_value{percentile="99"} 0
+memory_writeback_value{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu10"} 26000000
+cpu_usage_user_rate{cpu="cpu10",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu10",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu10",percentile="99"} 385875967
+cpu_usage_user_rate{cpu="cpu10",percentile="99.9"} 675282943
+# TYPE cpu_load_load15 gauge
+cpu_load_load15 41
+cpu_load_load15_value{percentile="50"} 41
+cpu_load_load15_value{percentile="90"} 41
+cpu_load_load15_value{percentile="99"} 41
+cpu_load_load15_value{percentile="99.9"} 41
+# TYPE memory_active(anon) gauge
+memory_active(anon) 550170624
+memory_active(anon)_value{percentile="50"} 482344959
+memory_active(anon)_value{percentile="90"} 534773759
+memory_active(anon)_value{percentile="99"} 549453823
+memory_active(anon)_value{percentile="99.9"} 549453823
+# TYPE memory_hardwarecorrupted gauge
+memory_hardwarecorrupted 0
+memory_hardwarecorrupted_value{percentile="50"} 0
+memory_hardwarecorrupted_value{percentile="90"} 0
+memory_hardwarecorrupted_value{percentile="99"} 0
+memory_hardwarecorrupted_value{percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="9"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu3"} 44000000
+cpu_usage_user_rate{cpu="cpu3",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu3",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu3",percentile="99"} 274726911
+cpu_usage_user_rate{cpu="cpu3",percentile="99.9"} 308281343
+# TYPE network_transmit_bytes counter
+network_transmit_bytes{iface="docker0"} 0
+network_transmit_bytes_rate{iface="docker0",percentile="50"} 0
+network_transmit_bytes_rate{iface="docker0",percentile="90"} 0
+network_transmit_bytes_rate{iface="docker0",percentile="99"} 0
+network_transmit_bytes_rate{iface="docker0",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu3"} 0
+cpu_usage_nice_rate{cpu="cpu3",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu3",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu3",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu3",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop2"} 0
+disk_write_bytes_rate{device="loop2",percentile="50"} 0
+disk_write_bytes_rate{device="loop2",percentile="90"} 0
+disk_write_bytes_rate{device="loop2",percentile="99"} 0
+disk_write_bytes_rate{device="loop2",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu2"} 0
+cpu_usage_nice_rate{cpu="cpu2",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu2",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu2",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu2",percentile="99.9"} 0
+# TYPE network_receive_dropped counter
+network_receive_dropped{iface="ens3"} 0
+network_receive_dropped_rate{iface="ens3",percentile="50"} 0
+network_receive_dropped_rate{iface="ens3",percentile="90"} 0
+network_receive_dropped_rate{iface="ens3",percentile="99"} 0
+network_receive_dropped_rate{iface="ens3",percentile="99.9"} 0
+# TYPE network_transmit_dropped counter
+network_transmit_dropped{iface="ens3"} 0
+network_transmit_dropped_rate{iface="ens3",percentile="50"} 0
+network_transmit_dropped_rate{iface="ens3",percentile="90"} 0
+network_transmit_dropped_rate{iface="ens3",percentile="99"} 0
+network_transmit_dropped_rate{iface="ens3",percentile="99.9"} 0
+# TYPE network_receive_dropped counter
+network_receive_dropped{iface="lo"} 0
+network_receive_dropped_rate{iface="lo",percentile="50"} 0
+network_receive_dropped_rate{iface="lo",percentile="90"} 0
+network_receive_dropped_rate{iface="lo",percentile="99"} 0
+network_receive_dropped_rate{iface="lo",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu14"} 0
+cpu_usage_nice_rate{cpu="cpu14",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu14",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu14",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu14",percentile="99.9"} 0
+# TYPE softirq_hi counter
+softirq_hi 0
+softirq_hi_rate{percentile="50"} 0
+softirq_hi_rate{percentile="90"} 0
+softirq_hi_rate{percentile="99"} 0
+softirq_hi_rate{percentile="99.9"} 0
+# TYPE ip_reasm_requests counter
+ip_reasm_requests 0
+ip_reasm_requests_rate{percentile="50"} 0
+ip_reasm_requests_rate{percentile="90"} 0
+ip_reasm_requests_rate{percentile="99"} 0
+ip_reasm_requests_rate{percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="vda1"} 4481023488
+disk_read_bytes_rate{device="vda1",percentile="50"} 0
+disk_read_bytes_rate{device="vda1",percentile="90"} 0
+disk_read_bytes_rate{device="vda1",percentile="99"} 0
+disk_read_bytes_rate{device="vda1",percentile="99.9"} 0
+# TYPE tcp_retrans_slow_start counter
+tcp_retrans_slow_start 33
+tcp_retrans_slow_start_rate{percentile="50"} 0
+tcp_retrans_slow_start_rate{percentile="90"} 0
+tcp_retrans_slow_start_rate{percentile="99"} 0
+tcp_retrans_slow_start_rate{percentile="99.9"} 0
+# TYPE memory_mapped gauge
+memory_mapped 305627136
+memory_mapped_value{percentile="50"} 304087039
+memory_mapped_value{percentile="90"} 304087039
+memory_mapped_value{percentile="99"} 304087039
+memory_mapped_value{percentile="99.9"} 304087039
+# TYPE tcp_retransmits counter
+tcp_retransmits{port="22"} 9
+tcp_retransmits_rate{port="22",percentile="50"} 0
+tcp_retransmits_rate{port="22",percentile="90"} 0
+tcp_retransmits_rate{port="22",percentile="99"} 0
+tcp_retransmits_rate{port="22",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop3"} 0
+disk_read_bytes_rate{device="loop3",percentile="50"} 0
+disk_read_bytes_rate{device="loop3",percentile="90"} 0
+disk_read_bytes_rate{device="loop3",percentile="99"} 0
+disk_read_bytes_rate{device="loop3",percentile="99.9"} 0
+# TYPE tcp_mem_pressure_events counter
+tcp_mem_pressure_events 0
+tcp_mem_pressure_events_rate{percentile="50"} 0
+tcp_mem_pressure_events_rate{percentile="90"} 0
+tcp_mem_pressure_events_rate{percentile="99"} 0
+tcp_mem_pressure_events_rate{percentile="99.9"} 0
+# TYPE memory_hugepages_free gauge
+memory_hugepages_free 0
+memory_hugepages_free_value{percentile="50"} 0
+memory_hugepages_free_value{percentile="90"} 0
+memory_hugepages_free_value{percentile="99"} 0
+memory_hugepages_free_value{percentile="99.9"} 0
+# TYPE memory_anonhugepages gauge
+memory_anonhugepages 0
+memory_anonhugepages_value{percentile="50"} 0
+memory_anonhugepages_value{percentile="90"} 0
+memory_anonhugepages_value{percentile="99"} 0
+memory_anonhugepages_value{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu1"} 40000000
+cpu_usage_user_rate{cpu="cpu1",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu1",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu1",percentile="99"} 196083711
+cpu_usage_user_rate{cpu="cpu1",percentile="99.9"} 333447167
+# TYPE tcp_rtt_us gauge
+tcp_rtt_us{port="22"} 21681
+tcp_rtt_us_value{port="22",percentile="50"} 77311
+tcp_rtt_us_value{port="22",percentile="90"} 132095
+tcp_rtt_us_value{port="22",percentile="99"} 132095
+tcp_rtt_us_value{port="22",percentile="99.9"} 132095
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu10"} 0
+cpu_usage_nice_rate{cpu="cpu10",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu10",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu10",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu10",percentile="99.9"} 0
+# TYPE nic_driver_rx_out_of_buffer counter
+nic_driver_rx_out_of_buffer{iface="ens3"} 26407
+nic_driver_rx_out_of_buffer_rate{iface="ens3",percentile="50"} 0
+nic_driver_rx_out_of_buffer_rate{iface="ens3",percentile="90"} 0
+nic_driver_rx_out_of_buffer_rate{iface="ens3",percentile="99"} 0
+nic_driver_rx_out_of_buffer_rate{iface="ens3",percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="3"} 12752587
+nic_queue_rx_packets_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="3",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="3",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu4"} 1875979737
+cpu_usage_system_rate{cpu="cpu4",percentile="50"} 104333311
+cpu_usage_system_rate{cpu="cpu4",percentile="90"} 1052770303
+cpu_usage_system_rate{cpu="cpu4",percentile="99"} 1073741823
+cpu_usage_system_rate{cpu="cpu4",percentile="99.9"} 1090519039
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu12"} 9000000
+cpu_usage_user_rate{cpu="cpu12",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu12",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu12",percentile="99"} 99090431
+cpu_usage_user_rate{cpu="cpu12",percentile="99.9"} 108527615
+# TYPE memory_pagetables gauge
+memory_pagetables 7081984
+memory_pagetables_value{percentile="50"} 6651903
+memory_pagetables_value{percentile="90"} 6946815
+memory_pagetables_value{percentile="99"} 7045119
+memory_pagetables_value{percentile="99.9"} 7045119
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="2"} 37143718106
+nic_queue_rx_bytes_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="2",percentile="99.9"} 0
+# TYPE tcp_rcv_collapsed counter
+tcp_rcv_collapsed 0
+tcp_rcv_collapsed_rate{percentile="50"} 0
+tcp_rcv_collapsed_rate{percentile="90"} 0
+tcp_rcv_collapsed_rate{percentile="99"} 0
+tcp_rcv_collapsed_rate{percentile="99.9"} 0
+# TYPE tcp_retrans_fast counter
+tcp_retrans_fast 4986
+tcp_retrans_fast_rate{percentile="50"} 0
+tcp_retrans_fast_rate{percentile="90"} 0
+tcp_retrans_fast_rate{percentile="99"} 0
+tcp_retrans_fast_rate{percentile="99.9"} 0
+# TYPE memory_writebacktmp gauge
+memory_writebacktmp 0
+memory_writebacktmp_value{percentile="50"} 0
+memory_writebacktmp_value{percentile="90"} 0
+memory_writebacktmp_value{percentile="99"} 0
+memory_writebacktmp_value{percentile="99.9"} 0
+# TYPE memory_sreclaimable gauge
+memory_sreclaimable 1027452928
+memory_sreclaimable_value{percentile="50"} 1027604479
+memory_sreclaimable_value{percentile="90"} 1027604479
+memory_sreclaimable_value{percentile="99"} 1027604479
+memory_sreclaimable_value{percentile="99.9"} 1027604479
+# TYPE softirq_block counter
+softirq_block 11
+softirq_block_rate{percentile="50"} 0
+softirq_block_rate{percentile="90"} 0
+softirq_block_rate{percentile="99"} 0
+softirq_block_rate{percentile="99.9"} 0
+# TYPE network_transmit_dropped counter
+network_transmit_dropped{iface="lo"} 0
+network_transmit_dropped_rate{iface="lo",percentile="50"} 0
+network_transmit_dropped_rate{iface="lo",percentile="90"} 0
+network_transmit_dropped_rate{iface="lo",percentile="99"} 0
+network_transmit_dropped_rate{iface="lo",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu13"} 5000000
+cpu_usage_system_rate{cpu="cpu13",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu13",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu13",percentile="99"} 95944703
+cpu_usage_system_rate{cpu="cpu13",percentile="99.9"} 107479039
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="6"} 30944037302
+nic_queue_rx_bytes_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="6",percentile="99.9"} 21375
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop2"} 0
+disk_read_bytes_rate{device="loop2",percentile="50"} 0
+disk_read_bytes_rate{device="loop2",percentile="90"} 0
+disk_read_bytes_rate{device="loop2",percentile="99"} 0
+disk_read_bytes_rate{device="loop2",percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="0"} 36501286315
+nic_queue_rx_bytes_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="0",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="0",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu8"} 114000000
+cpu_usage_system_rate{cpu="cpu8",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu8",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu8",percentile="99"} 872415231
+cpu_usage_system_rate{cpu="cpu8",percentile="99.9"} 973078527
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="7"} 37452686
+nic_queue_rx_packets_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="7",percentile="99"} 110
+nic_queue_rx_packets_rate{iface="ens3",queue="7",percentile="99.9"} 123
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop3"} 0
+disk_write_bytes_rate{device="loop3",percentile="50"} 0
+disk_write_bytes_rate{device="loop3",percentile="90"} 0
+disk_write_bytes_rate{device="loop3",percentile="99"} 0
+disk_write_bytes_rate{device="loop3",percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="10"} 25111096
+nic_queue_rx_packets_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE memory_zswapped gauge
+memory_zswapped 0
+memory_zswapped_value{percentile="50"} 0
+memory_zswapped_value{percentile="90"} 0
+memory_zswapped_value{percentile="99"} 0
+memory_zswapped_value{percentile="99.9"} 0
+# TYPE icmp_in_time_exceeded counter
+icmp_in_time_exceeded 0
+icmp_in_time_exceeded_rate{percentile="50"} 0
+icmp_in_time_exceeded_rate{percentile="90"} 0
+icmp_in_time_exceeded_rate{percentile="99"} 0
+icmp_in_time_exceeded_rate{percentile="99.9"} 0
+# TYPE nic_rx_missed counter
+nic_rx_missed{iface="ens3"} 26407
+nic_rx_missed_rate{iface="ens3",percentile="50"} 0
+nic_rx_missed_rate{iface="ens3",percentile="90"} 0
+nic_rx_missed_rate{iface="ens3",percentile="99"} 0
+nic_rx_missed_rate{iface="ens3",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="10"} 4248443
+nic_queue_tx_packets_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE psi_cpu_full_avg10 gauge
+psi_cpu_full_avg10 0
+psi_cpu_full_avg10_value{percentile="50"} 0
+psi_cpu_full_avg10_value{percentile="90"} 0
+psi_cpu_full_avg10_value{percentile="99"} 0
+psi_cpu_full_avg10_value{percentile="99.9"} 0
+# TYPE tcp_dsack_old_sent counter
+tcp_dsack_old_sent 1111
+tcp_dsack_old_sent_rate{percentile="50"} 0
+tcp_dsack_old_sent_rate{percentile="90"} 0
+tcp_dsack_old_sent_rate{percentile="99"} 0
+tcp_dsack_old_sent_rate{percentile="99.9"} 0
+# TYPE tcp_drop_rcvq counter
+tcp_drop_rcvq 0
+tcp_drop_rcvq_rate{percentile="50"} 0
+tcp_drop_rcvq_rate{percentile="90"} 0
+tcp_drop_rcvq_rate{percentile="99"} 0
+tcp_drop_rcvq_rate{percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop4"} 0
+disk_read_bytes_rate{device="loop4",percentile="50"} 0
+disk_read_bytes_rate{device="loop4",percentile="90"} 0
+disk_read_bytes_rate{device="loop4",percentile="99"} 0
+disk_read_bytes_rate{device="loop4",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop4"} 0
+disk_write_bytes_rate{device="loop4",percentile="50"} 0
+disk_write_bytes_rate{device="loop4",percentile="90"} 0
+disk_write_bytes_rate{device="loop4",percentile="99"} 0
+disk_write_bytes_rate{device="loop4",percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="8"} 19145004565
+nic_queue_rx_bytes_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE udp_in_datagrams counter
+udp_in_datagrams 2801
+udp_in_datagrams_rate{percentile="50"} 0
+udp_in_datagrams_rate{percentile="90"} 0
+udp_in_datagrams_rate{percentile="99"} 0
+udp_in_datagrams_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="3"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="3",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="3",percentile="99.9"} 0
+# TYPE softirq_net_rx counter
+softirq_net_rx 35087093
+softirq_net_rx_rate{percentile="50"} 0
+softirq_net_rx_rate{percentile="90"} 101
+softirq_net_rx_rate{percentile="99"} 192
+softirq_net_rx_rate{percentile="99.9"} 409
+# TYPE softirq_rcu counter
+softirq_rcu 15330890
+softirq_rcu_rate{percentile="50"} 1703
+softirq_rcu_rate{percentile="90"} 2495
+softirq_rcu_rate{percentile="99"} 3471
+softirq_rcu_rate{percentile="99.9"} 6463
+# TYPE psi_memory_full_avg60 gauge
+psi_memory_full_avg60 0
+psi_memory_full_avg60_value{percentile="50"} 0
+psi_memory_full_avg60_value{percentile="90"} 0
+psi_memory_full_avg60_value{percentile="99"} 0
+psi_memory_full_avg60_value{percentile="99.9"} 0
+# TYPE memory_inactive(file) gauge
+memory_inactive(file) 20745551872
+memory_inactive(file)_value{percentile="50"} 20803747839
+memory_inactive(file)_value{percentile="90"} 20803747839
+memory_inactive(file)_value{percentile="99"} 20803747839
+memory_inactive(file)_value{percentile="99.9"} 20803747839
+# TYPE network_transmit_bytes counter
+network_transmit_bytes{iface="ens3"} 8364
+network_transmit_bytes_rate{iface="ens3",percentile="50"} 0
+network_transmit_bytes_rate{iface="ens3",percentile="90"} 0
+network_transmit_bytes_rate{iface="ens3",percentile="99"} 21503
+network_transmit_bytes_rate{iface="ens3",percentile="99.9"} 163839
+# TYPE psi_memory_full_avg10 gauge
+psi_memory_full_avg10 0
+psi_memory_full_avg10_value{percentile="50"} 0
+psi_memory_full_avg10_value{percentile="90"} 0
+psi_memory_full_avg10_value{percentile="99"} 0
+psi_memory_full_avg10_value{percentile="99.9"} 0
+# TYPE tcp_drop_listen counter
+tcp_drop_listen 686
+tcp_drop_listen_rate{percentile="50"} 0
+tcp_drop_listen_rate{percentile="90"} 0
+tcp_drop_listen_rate{percentile="99"} 0
+tcp_drop_listen_rate{percentile="99.9"} 0
+# TYPE memory_nfs_unstable gauge
+memory_nfs_unstable 0
+memory_nfs_unstable_value{percentile="50"} 0
+memory_nfs_unstable_value{percentile="90"} 0
+memory_nfs_unstable_value{percentile="99"} 0
+memory_nfs_unstable_value{percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="1"} 21487063
+nic_queue_rx_packets_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="1",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="1",percentile="99.9"} 0
+# TYPE memory_zswap gauge
+memory_zswap 0
+memory_zswap_value{percentile="50"} 0
+memory_zswap_value{percentile="90"} 0
+memory_zswap_value{percentile="99"} 0
+memory_zswap_value{percentile="99.9"} 0
+# TYPE softirq_timer counter
+softirq_timer 11169555
+softirq_timer_rate{percentile="50"} 233
+softirq_timer_rate{percentile="90"} 385
+softirq_timer_rate{percentile="99"} 571
+softirq_timer_rate{percentile="99.9"} 767
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="vda"} 4502707200
+disk_read_bytes_rate{device="vda",percentile="50"} 0
+disk_read_bytes_rate{device="vda",percentile="90"} 0
+disk_read_bytes_rate{device="vda",percentile="99"} 0
+disk_read_bytes_rate{device="vda",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="6"} 5194088
+nic_queue_tx_packets_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="6",percentile="99.9"} 164
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu0"} 274000000
+cpu_usage_system_rate{cpu="cpu0",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu0",percentile="90"} 106954751
+cpu_usage_system_rate{cpu="cpu0",percentile="99"} 989855743
+cpu_usage_system_rate{cpu="cpu0",percentile="99.9"} 1069547519
+# TYPE memory_bounce gauge
+memory_bounce 0
+memory_bounce_value{percentile="50"} 0
+memory_bounce_value{percentile="90"} 0
+memory_bounce_value{percentile="99"} 0
+memory_bounce_value{percentile="99.9"} 0
+# TYPE psi_memory_full_avg300 gauge
+psi_memory_full_avg300 0
+psi_memory_full_avg300_value{percentile="50"} 0
+psi_memory_full_avg300_value{percentile="90"} 0
+psi_memory_full_avg300_value{percentile="99"} 0
+psi_memory_full_avg300_value{percentile="99.9"} 0
+# TYPE tcp_dsack_recv counter
+tcp_dsack_recv 1324
+tcp_dsack_recv_rate{percentile="50"} 0
+tcp_dsack_recv_rate{percentile="90"} 0
+tcp_dsack_recv_rate{percentile="99"} 0
+tcp_dsack_recv_rate{percentile="99.9"} 0
+# TYPE tcp_retrans_fail counter
+tcp_retrans_fail 0
+tcp_retrans_fail_rate{percentile="50"} 0
+tcp_retrans_fail_rate{percentile="90"} 0
+tcp_retrans_fail_rate{percentile="99"} 0
+tcp_retrans_fail_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="9"} 41579997831
+nic_queue_rx_bytes_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE tcp_ofo_queued counter
+tcp_ofo_queued 99103
+tcp_ofo_queued_rate{percentile="50"} 0
+tcp_ofo_queued_rate{percentile="90"} 0
+tcp_ofo_queued_rate{percentile="99"} 0
+tcp_ofo_queued_rate{percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu1"} 527000000
+cpu_usage_system_rate{cpu="cpu1",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu1",percentile="90"} 868220927
+cpu_usage_system_rate{cpu="cpu1",percentile="99"} 1056964607
+cpu_usage_system_rate{cpu="cpu1",percentile="99.9"} 1082130431
+# TYPE softirq_net_tx counter
+softirq_net_tx 1016504
+softirq_net_tx_rate{percentile="50"} 0
+softirq_net_tx_rate{percentile="90"} 0
+softirq_net_tx_rate{percentile="99"} 0
+softirq_net_tx_rate{percentile="99.9"} 0
+# TYPE tcp_rtt_us summary
+tcp_rtt_us 1
+tcp_rtt_us_rate{percentile="50"} 114687
+tcp_rtt_us_rate{percentile="90"} 114687
+tcp_rtt_us_rate{percentile="99"} 114687
+tcp_rtt_us_rate{percentile="99.9"} 114687
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu2"} 28000000
+cpu_usage_user_rate{cpu="cpu2",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu2",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu2",percentile="99"} 108527615
+cpu_usage_user_rate{cpu="cpu2",percentile="99.9"} 190840831
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu11"} 42000000
+cpu_usage_user_rate{cpu="cpu11",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu11",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu11",percentile="99"} 203423743
+cpu_usage_user_rate{cpu="cpu11",percentile="99.9"} 322961407
+# TYPE psi_io_some_avg10 gauge
+psi_io_some_avg10 0
+psi_io_some_avg10_value{percentile="50"} 0
+psi_io_some_avg10_value{percentile="90"} 0
+psi_io_some_avg10_value{percentile="99"} 0
+psi_io_some_avg10_value{percentile="99.9"} 0
+# TYPE memory_dirty gauge
+memory_dirty 98304
+memory_dirty_value{percentile="50"} 94719
+memory_dirty_value{percentile="90"} 98815
+memory_dirty_value{percentile="99"} 98815
+memory_dirty_value{percentile="99.9"} 98815
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="5"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="5",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="5",percentile="99.9"} 0
+# TYPE tcp_active_opens counter
+tcp_active_opens 391
+tcp_active_opens_rate{percentile="50"} 0
+tcp_active_opens_rate{percentile="90"} 0
+tcp_active_opens_rate{percentile="99"} 0
+tcp_active_opens_rate{percentile="99.9"} 102
+# TYPE network_receive_bytes counter
+network_receive_bytes{iface="ens3"} 1794
+network_receive_bytes_rate{iface="ens3",percentile="50"} 0
+network_receive_bytes_rate{iface="ens3",percentile="90"} 0
+network_receive_bytes_rate{iface="ens3",percentile="99"} 4927
+network_receive_bytes_rate{iface="ens3",percentile="99.9"} 8159
+# TYPE memory_active(file) gauge
+memory_active(file) 5023956992
+memory_active(file)_value{percentile="50"} 5033164799
+memory_active(file)_value{percentile="90"} 5033164799
+memory_active(file)_value{percentile="99"} 5033164799
+memory_active(file)_value{percentile="99.9"} 5033164799
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop5"} 0
+disk_read_bytes_rate{device="loop5",percentile="50"} 0
+disk_read_bytes_rate{device="loop5",percentile="90"} 0
+disk_read_bytes_rate{device="loop5",percentile="99"} 0
+disk_read_bytes_rate{device="loop5",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop0"} 0
+disk_write_bytes_rate{device="loop0",percentile="50"} 0
+disk_write_bytes_rate{device="loop0",percentile="90"} 0
+disk_write_bytes_rate{device="loop0",percentile="99"} 0
+disk_write_bytes_rate{device="loop0",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop6"} 0
+disk_write_bytes_rate{device="loop6",percentile="50"} 0
+disk_write_bytes_rate{device="loop6",percentile="90"} 0
+disk_write_bytes_rate{device="loop6",percentile="99"} 0
+disk_write_bytes_rate{device="loop6",percentile="99.9"} 0
+# TYPE memory_shmem gauge
+memory_shmem 1093632
+memory_shmem_value{percentile="50"} 1097727
+memory_shmem_value{percentile="90"} 1097727
+memory_shmem_value{percentile="99"} 1097727
+memory_shmem_value{percentile="99.9"} 1097727
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="vda16"} 164864
+disk_write_bytes_rate{device="vda16",percentile="50"} 0
+disk_write_bytes_rate{device="vda16",percentile="90"} 0
+disk_write_bytes_rate{device="vda16",percentile="99"} 0
+disk_write_bytes_rate{device="vda16",percentile="99.9"} 0
+# TYPE network_receive_dropped counter
+network_receive_dropped{iface="tailscale0"} 0
+network_receive_dropped_rate{iface="tailscale0",percentile="50"} 0
+network_receive_dropped_rate{iface="tailscale0",percentile="90"} 0
+network_receive_dropped_rate{iface="tailscale0",percentile="99"} 0
+network_receive_dropped_rate{iface="tailscale0",percentile="99.9"} 0
+# TYPE memory_commitlimit gauge
+memory_commitlimit 33710264320
+memory_commitlimit_value{percentile="50"} 33822867455
+memory_commitlimit_value{percentile="90"} 33822867455
+memory_commitlimit_value{percentile="99"} 33822867455
+memory_commitlimit_value{percentile="99.9"} 33822867455
+# TYPE tcp_out_segs counter
+tcp_out_segs 47556340
+tcp_out_segs_rate{percentile="50"} 0
+tcp_out_segs_rate{percentile="90"} 0
+tcp_out_segs_rate{percentile="99"} 117
+tcp_out_segs_rate{percentile="99.9"} 511
+# TYPE udp_rcvbuf_errors counter
+udp_rcvbuf_errors 0
+udp_rcvbuf_errors_rate{percentile="50"} 0
+udp_rcvbuf_errors_rate{percentile="90"} 0
+udp_rcvbuf_errors_rate{percentile="99"} 0
+udp_rcvbuf_errors_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="1"} 2839196
+nic_queue_tx_packets_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="1",percentile="99"} 95
+nic_queue_tx_packets_rate{iface="ens3",queue="1",percentile="99.9"} 122
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="7"} 4239086115
+nic_queue_tx_bytes_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="7",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="7",percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="4"} 35112486140
+nic_queue_rx_bytes_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu5"} 793000000
+cpu_usage_system_rate{cpu="cpu5",percentile="50"} 97517567
+cpu_usage_system_rate{cpu="cpu5",percentile="90"} 859832319
+cpu_usage_system_rate{cpu="cpu5",percentile="99"} 1044381695
+cpu_usage_system_rate{cpu="cpu5",percentile="99.9"} 1090519039
+# TYPE memory_directmap4k gauge
+memory_directmap4k 202305536
+memory_directmap4k_value{percentile="50"} 202375167
+memory_directmap4k_value{percentile="90"} 202375167
+memory_directmap4k_value{percentile="99"} 202375167
+memory_directmap4k_value{percentile="99.9"} 202375167
+# TYPE net_sockets_tcp_tw gauge
+net_sockets_tcp_tw 1
+net_sockets_tcp_tw_value{percentile="50"} 1
+net_sockets_tcp_tw_value{percentile="90"} 1
+net_sockets_tcp_tw_value{percentile="99"} 1
+net_sockets_tcp_tw_value{percentile="99.9"} 1
+# TYPE net_sockets_tcp_inuse gauge
+net_sockets_tcp_inuse 17
+net_sockets_tcp_inuse_value{percentile="50"} 15
+net_sockets_tcp_inuse_value{percentile="90"} 15
+net_sockets_tcp_inuse_value{percentile="99"} 15
+net_sockets_tcp_inuse_value{percentile="99.9"} 15
+# TYPE memory_kernelstack gauge
+memory_kernelstack 5931008
+memory_kernelstack_value{percentile="50"} 5963775
+memory_kernelstack_value{percentile="90"} 5963775
+memory_kernelstack_value{percentile="99"} 5963775
+memory_kernelstack_value{percentile="99.9"} 5963775
+# TYPE tcp_retransmits counter
+tcp_retransmits{port="443"} 220
+tcp_retransmits_rate{port="443",percentile="50"} 0
+tcp_retransmits_rate{port="443",percentile="90"} 0
+tcp_retransmits_rate{port="443",percentile="99"} 0
+tcp_retransmits_rate{port="443",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="vda15"} 1024
+disk_write_bytes_rate{device="vda15",percentile="50"} 0
+disk_write_bytes_rate{device="vda15",percentile="90"} 0
+disk_write_bytes_rate{device="vda15",percentile="99"} 0
+disk_write_bytes_rate{device="vda15",percentile="99.9"} 0
+# TYPE memory_unaccepted gauge
+memory_unaccepted 0
+memory_unaccepted_value{percentile="50"} 0
+memory_unaccepted_value{percentile="90"} 0
+memory_unaccepted_value{percentile="99"} 0
+memory_unaccepted_value{percentile="99.9"} 0
+# TYPE tcp_window_zero_sent counter
+tcp_window_zero_sent 0
+tcp_window_zero_sent_rate{percentile="50"} 0
+tcp_window_zero_sent_rate{percentile="90"} 0
+tcp_window_zero_sent_rate{percentile="99"} 0
+tcp_window_zero_sent_rate{percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu4"} 0
+cpu_usage_nice_rate{cpu="cpu4",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu4",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu4",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu4",percentile="99.9"} 0
+# TYPE psi_io_some_avg300 gauge
+psi_io_some_avg300 0
+psi_io_some_avg300_value{percentile="50"} 0
+psi_io_some_avg300_value{percentile="90"} 0
+psi_io_some_avg300_value{percentile="99"} 0
+psi_io_some_avg300_value{percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="vda15"} 10546176
+disk_read_bytes_rate{device="vda15",percentile="50"} 0
+disk_read_bytes_rate{device="vda15",percentile="90"} 0
+disk_read_bytes_rate{device="vda15",percentile="99"} 0
+disk_read_bytes_rate{device="vda15",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="5"} 3319222173
+nic_queue_tx_bytes_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="5",percentile="99"} 19455
+nic_queue_tx_bytes_rate{iface="ens3",queue="5",percentile="99.9"} 169983
+# TYPE tcp_drop_listen_overflow counter
+tcp_drop_listen_overflow 686
+tcp_drop_listen_overflow_rate{percentile="50"} 0
+tcp_drop_listen_overflow_rate{percentile="90"} 0
+tcp_drop_listen_overflow_rate{percentile="99"} 0
+tcp_drop_listen_overflow_rate{percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="9"} 2491987
+nic_queue_tx_packets_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu11"} 66000000
+cpu_usage_system_rate{cpu="cpu11",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu11",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu11",percentile="99"} 922746879
+cpu_usage_system_rate{cpu="cpu11",percentile="99.9"} 1023410175
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="9"} 27591389
+nic_queue_rx_packets_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="3"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="3",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="3",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop0"} 14336
+disk_read_bytes_rate{device="loop0",percentile="50"} 0
+disk_read_bytes_rate{device="loop0",percentile="90"} 0
+disk_read_bytes_rate{device="loop0",percentile="99"} 0
+disk_read_bytes_rate{device="loop0",percentile="99.9"} 0
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="3"} 2474891
+nic_queue_tx_packets_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="3",percentile="99"} 99
+nic_queue_tx_packets_rate{iface="ens3",queue="3",percentile="99.9"} 110
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="8"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="vda16"} 8229376
+disk_read_bytes_rate{device="vda16",percentile="50"} 0
+disk_read_bytes_rate{device="vda16",percentile="90"} 0
+disk_read_bytes_rate{device="vda16",percentile="99"} 0
+disk_read_bytes_rate{device="vda16",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu10"} 24000000
+cpu_usage_system_rate{cpu="cpu10",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu10",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu10",percentile="99"} 94371839
+cpu_usage_system_rate{cpu="cpu10",percentile="99.9"} 960495615
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu4"} 19000000
+cpu_usage_user_rate{cpu="cpu4",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu4",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu4",percentile="99"} 105906175
+cpu_usage_user_rate{cpu="cpu4",percentile="99.9"} 517996543
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="6"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="6",percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="7"} 56078067726
+nic_queue_rx_bytes_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="7",percentile="99"} 6591
+nic_queue_rx_bytes_rate{iface="ens3",queue="7",percentile="99.9"} 7391
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="4"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE memory_memavailable gauge
+memory_memavailable 65524424704
+memory_memavailable_value{percentile="50"} 65766686719
+memory_memavailable_value{percentile="90"} 65766686719
+memory_memavailable_value{percentile="99"} 65766686719
+memory_memavailable_value{percentile="99.9"} 65766686719
+# TYPE psi_io_full_avg10 gauge
+psi_io_full_avg10 0
+psi_io_full_avg10_value{percentile="50"} 0
+psi_io_full_avg10_value{percentile="90"} 0
+psi_io_full_avg10_value{percentile="99"} 0
+psi_io_full_avg10_value{percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="0"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="0",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="0",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="0",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="0",percentile="99.9"} 0
+# TYPE memory_mlocked gauge
+memory_mlocked 27803648
+memory_mlocked_value{percentile="50"} 27918335
+memory_mlocked_value{percentile="90"} 27918335
+memory_mlocked_value{percentile="99"} 27918335
+memory_mlocked_value{percentile="99.9"} 27918335
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop1"} 0
+disk_read_bytes_rate{device="loop1",percentile="50"} 0
+disk_read_bytes_rate{device="loop1",percentile="90"} 0
+disk_read_bytes_rate{device="loop1",percentile="99"} 0
+disk_read_bytes_rate{device="loop1",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop7"} 0
+disk_read_bytes_rate{device="loop7",percentile="50"} 0
+disk_read_bytes_rate{device="loop7",percentile="90"} 0
+disk_read_bytes_rate{device="loop7",percentile="99"} 0
+disk_read_bytes_rate{device="loop7",percentile="99.9"} 0
+# TYPE udp_out_datagrams counter
+udp_out_datagrams 3028
+udp_out_datagrams_rate{percentile="50"} 0
+udp_out_datagrams_rate{percentile="90"} 0
+udp_out_datagrams_rate{percentile="99"} 0
+udp_out_datagrams_rate{percentile="99.9"} 0
+# TYPE tcp_passive_opens counter
+tcp_passive_opens 161406
+tcp_passive_opens_rate{percentile="50"} 0
+tcp_passive_opens_rate{percentile="90"} 0
+tcp_passive_opens_rate{percentile="99"} 0
+tcp_passive_opens_rate{percentile="99.9"} 102
+# TYPE memory_hugepages_total gauge
+memory_hugepages_total 0
+memory_hugepages_total_value{percentile="50"} 0
+memory_hugepages_total_value{percentile="90"} 0
+memory_hugepages_total_value{percentile="99"} 0
+memory_hugepages_total_value{percentile="99.9"} 0
+# TYPE memory_cached gauge
+memory_cached 25446912000
+memory_cached_value{percentile="50"} 25501368319
+memory_cached_value{percentile="90"} 25501368319
+memory_cached_value{percentile="99"} 25501368319
+memory_cached_value{percentile="99.9"} 25501368319
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="7"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="7",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="7",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="7",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="7",percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop5"} 0
+disk_write_bytes_rate{device="loop5",percentile="50"} 0
+disk_write_bytes_rate{device="loop5",percentile="90"} 0
+disk_write_bytes_rate{device="loop5",percentile="99"} 0
+disk_write_bytes_rate{device="loop5",percentile="99.9"} 0
+# TYPE tcp_drop_ofo counter
+tcp_drop_ofo 0
+tcp_drop_ofo_rate{percentile="50"} 0
+tcp_drop_ofo_rate{percentile="90"} 0
+tcp_drop_ofo_rate{percentile="99"} 0
+tcp_drop_ofo_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="8"} 13066226
+nic_queue_rx_packets_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE nic_driver_rx_crc_errors_phy counter
+nic_driver_rx_crc_errors_phy{iface="ens3"} 0
+nic_driver_rx_crc_errors_phy_rate{iface="ens3",percentile="50"} 0
+nic_driver_rx_crc_errors_phy_rate{iface="ens3",percentile="90"} 0
+nic_driver_rx_crc_errors_phy_rate{iface="ens3",percentile="99"} 0
+nic_driver_rx_crc_errors_phy_rate{iface="ens3",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="2"} 3114111759
+nic_queue_tx_bytes_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="2",percentile="99.9"} 21503
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu15"} 18000000
+cpu_usage_system_rate{cpu="cpu15",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu15",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu15",percentile="99"} 0
+cpu_usage_system_rate{cpu="cpu15",percentile="99.9"} 960495615
+# TYPE tcp_ofo_merged counter
+tcp_ofo_merged 12
+tcp_ofo_merged_rate{percentile="50"} 0
+tcp_ofo_merged_rate{percentile="90"} 0
+tcp_ofo_merged_rate{percentile="99"} 0
+tcp_ofo_merged_rate{percentile="99.9"} 0
+# TYPE psi_io_full_avg300 gauge
+psi_io_full_avg300 0
+psi_io_full_avg300_value{percentile="50"} 0
+psi_io_full_avg300_value{percentile="90"} 0
+psi_io_full_avg300_value{percentile="99"} 0
+psi_io_full_avg300_value{percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="vda1"} 32254006272
+disk_write_bytes_rate{device="vda1",percentile="50"} 0
+disk_write_bytes_rate{device="vda1",percentile="90"} 0
+disk_write_bytes_rate{device="vda1",percentile="99"} 0
+disk_write_bytes_rate{device="vda1",percentile="99.9"} 0
+# TYPE network_transmit_bytes counter
+network_transmit_bytes{iface="lo"} 378
+network_transmit_bytes_rate{iface="lo",percentile="50"} 0
+network_transmit_bytes_rate{iface="lo",percentile="90"} 0
+network_transmit_bytes_rate{iface="lo",percentile="99"} 0
+network_transmit_bytes_rate{iface="lo",percentile="99.9"} 38143
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="3"} 18879087077
+nic_queue_rx_bytes_rate{iface="ens3",queue="3",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="3",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="3",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="3",percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="9"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="9",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="9",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="9",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="9",percentile="99.9"} 0
+# TYPE nic_driver_rx_steer_missed_packets counter
+nic_driver_rx_steer_missed_packets{iface="ens3"} 0
+nic_driver_rx_steer_missed_packets_rate{iface="ens3",percentile="50"} 0
+nic_driver_rx_steer_missed_packets_rate{iface="ens3",percentile="90"} 0
+nic_driver_rx_steer_missed_packets_rate{iface="ens3",percentile="99"} 0
+nic_driver_rx_steer_missed_packets_rate{iface="ens3",percentile="99.9"} 0
+# TYPE disk_read_bytes counter
+disk_read_bytes{device="loop6"} 0
+disk_read_bytes_rate{device="loop6",percentile="50"} 0
+disk_read_bytes_rate{device="loop6",percentile="90"} 0
+disk_read_bytes_rate{device="loop6",percentile="99"} 0
+disk_read_bytes_rate{device="loop6",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu6"} 0
+cpu_usage_nice_rate{cpu="cpu6",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu6",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu6",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu6",percentile="99.9"} 0
+# TYPE memory_secpagetables gauge
+memory_secpagetables 0
+memory_secpagetables_value{percentile="50"} 0
+memory_secpagetables_value{percentile="90"} 0
+memory_secpagetables_value{percentile="99"} 0
+memory_secpagetables_value{percentile="99.9"} 0
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="loop1"} 0
+disk_write_bytes_rate{device="loop1",percentile="50"} 0
+disk_write_bytes_rate{device="loop1",percentile="90"} 0
+disk_write_bytes_rate{device="loop1",percentile="99"} 0
+disk_write_bytes_rate{device="loop1",percentile="99.9"} 0
+# TYPE ip_in_hdr_errors counter
+ip_in_hdr_errors 0
+ip_in_hdr_errors_rate{percentile="50"} 0
+ip_in_hdr_errors_rate{percentile="90"} 0
+ip_in_hdr_errors_rate{percentile="99"} 0
+ip_in_hdr_errors_rate{percentile="99.9"} 0
+# TYPE memory_hugetlb gauge
+memory_hugetlb 0
+memory_hugetlb_value{percentile="50"} 0
+memory_hugetlb_value{percentile="90"} 0
+memory_hugetlb_value{percentile="99"} 0
+memory_hugetlb_value{percentile="99.9"} 0
+# TYPE tcp_rtt_us gauge
+tcp_rtt_us{port="443"} 1314
+tcp_rtt_us_value{port="443",percentile="50"} 1655
+tcp_rtt_us_value{port="443",percentile="90"} 13247
+tcp_rtt_us_value{port="443",percentile="99"} 13247
+tcp_rtt_us_value{port="443",percentile="99.9"} 13247
+# TYPE nic_queue_tx_packets counter
+nic_queue_tx_packets{iface="ens3",queue="2"} 4001164
+nic_queue_tx_packets_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_tx_packets_rate{iface="ens3",queue="2",percentile="99.9"} 106
+# TYPE cpu_load_load5 gauge
+cpu_load_load5 100
+cpu_load_load5_value{percentile="50"} 100
+cpu_load_load5_value{percentile="90"} 100
+cpu_load_load5_value{percentile="99"} 100
+cpu_load_load5_value{percentile="99.9"} 100
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu8"} 0
+cpu_usage_nice_rate{cpu="cpu8",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu8",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu8",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu8",percentile="99.9"} 0
+# TYPE tcp_in_segs counter
+tcp_in_segs 36127151
+tcp_in_segs_rate{percentile="50"} 0
+tcp_in_segs_rate{percentile="90"} 94
+tcp_in_segs_rate{percentile="99"} 111
+tcp_in_segs_rate{percentile="99.9"} 511
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="5"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="5",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="5",percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="6"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="6",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="6",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="6",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="6",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu15"} 0
+cpu_usage_nice_rate{cpu="cpu15",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu15",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu15",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu15",percentile="99.9"} 0
+# TYPE memory_slab gauge
+memory_slab 1268486144
+memory_slab_value{percentile="50"} 1275068415
+memory_slab_value{percentile="90"} 1275068415
+memory_slab_value{percentile="99"} 1275068415
+memory_slab_value{percentile="99.9"} 1275068415
+# TYPE memory_swapfree gauge
+memory_swapfree 0
+memory_swapfree_value{percentile="50"} 0
+memory_swapfree_value{percentile="90"} 0
+memory_swapfree_value{percentile="99"} 0
+memory_swapfree_value{percentile="99.9"} 0
+# TYPE icmp_out_dest_unreachable counter
+icmp_out_dest_unreachable 206
+icmp_out_dest_unreachable_rate{percentile="50"} 0
+icmp_out_dest_unreachable_rate{percentile="90"} 0
+icmp_out_dest_unreachable_rate{percentile="99"} 0
+icmp_out_dest_unreachable_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="5"} 7034189088
+nic_queue_rx_bytes_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="5",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="5",percentile="99.9"} 0
+# TYPE memory_vmalloctotal gauge
+memory_vmalloctotal 14073748835531776
+memory_vmalloctotal_value{percentile="50"} 0
+memory_vmalloctotal_value{percentile="90"} 0
+memory_vmalloctotal_value{percentile="99"} 0
+memory_vmalloctotal_value{percentile="99.9"} 0
+# TYPE nic_queue_rx_bytes counter
+nic_queue_rx_bytes{iface="ens3",queue="1"} 32098347778
+nic_queue_rx_bytes_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="1",percentile="99"} 0
+nic_queue_rx_bytes_rate{iface="ens3",queue="1",percentile="99.9"} 0
+# TYPE memory_inactive(anon) gauge
+memory_inactive(anon) 0
+memory_inactive(anon)_value{percentile="50"} 0
+memory_inactive(anon)_value{percentile="90"} 0
+memory_inactive(anon)_value{percentile="99"} 0
+memory_inactive(anon)_value{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu9"} 5000000
+cpu_usage_user_rate{cpu="cpu9",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu9",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu9",percentile="99"} 0
+cpu_usage_user_rate{cpu="cpu9",percentile="99.9"} 191889407
+# TYPE memory_filepmdmapped gauge
+memory_filepmdmapped 0
+memory_filepmdmapped_value{percentile="50"} 0
+memory_filepmdmapped_value{percentile="90"} 0
+memory_filepmdmapped_value{percentile="99"} 0
+memory_filepmdmapped_value{percentile="99.9"} 0
+# TYPE memory_active gauge
+memory_active 5576384512
+memory_active_value{percentile="50"} 5536481279
+memory_active_value{percentile="90"} 5570035711
+memory_active_value{percentile="99"} 5603590143
+memory_active_value{percentile="99.9"} 5603590143
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="10"} 2954909297
+nic_queue_tx_bytes_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE network_receive_bytes counter
+network_receive_bytes{iface="docker0"} 0
+network_receive_bytes_rate{iface="docker0",percentile="50"} 0
+network_receive_bytes_rate{iface="docker0",percentile="90"} 0
+network_receive_bytes_rate{iface="docker0",percentile="99"} 0
+network_receive_bytes_rate{iface="docker0",percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="10"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="10",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="10",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="10",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="10",percentile="99.9"} 0
+# TYPE memory_buffers gauge
+memory_buffers 332652544
+memory_buffers_value{percentile="50"} 333447167
+memory_buffers_value{percentile="90"} 333447167
+memory_buffers_value{percentile="99"} 333447167
+memory_buffers_value{percentile="99.9"} 333447167
+# TYPE tcp_rtt_us gauge
+tcp_rtt_us{port="80"} 122288
+tcp_rtt_us_value{port="80",percentile="50"} 122367
+tcp_rtt_us_value{port="80",percentile="90"} 122367
+tcp_rtt_us_value{port="80",percentile="99"} 122367
+tcp_rtt_us_value{port="80",percentile="99.9"} 122367
+# TYPE ip_in_discards counter
+ip_in_discards 0
+ip_in_discards_rate{percentile="50"} 0
+ip_in_discards_rate{percentile="90"} 0
+ip_in_discards_rate{percentile="99"} 0
+ip_in_discards_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="8"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE memory_vmallocchunk gauge
+memory_vmallocchunk 0
+memory_vmallocchunk_value{percentile="50"} 0
+memory_vmallocchunk_value{percentile="90"} 0
+memory_vmallocchunk_value{percentile="99"} 0
+memory_vmallocchunk_value{percentile="99.9"} 0
+# TYPE memory_shmempmdmapped gauge
+memory_shmempmdmapped 0
+memory_shmempmdmapped_value{percentile="50"} 0
+memory_shmempmdmapped_value{percentile="90"} 0
+memory_shmempmdmapped_value{percentile="99"} 0
+memory_shmempmdmapped_value{percentile="99.9"} 0
+# TYPE memory_hugepagesize gauge
+memory_hugepagesize 2097152
+memory_hugepagesize_value{percentile="50"} 2113535
+memory_hugepagesize_value{percentile="90"} 2113535
+memory_hugepagesize_value{percentile="99"} 2113535
+memory_hugepagesize_value{percentile="99.9"} 2113535
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu6"} 122000000
+cpu_usage_system_rate{cpu="cpu6",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu6",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu6",percentile="99"} 943718399
+cpu_usage_system_rate{cpu="cpu6",percentile="99.9"} 1019215871
+# TYPE disk_write_bytes counter
+disk_write_bytes{device="vda14"} 0
+disk_write_bytes_rate{device="vda14",percentile="50"} 0
+disk_write_bytes_rate{device="vda14",percentile="90"} 0
+disk_write_bytes_rate{device="vda14",percentile="99"} 0
+disk_write_bytes_rate{device="vda14",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="1"} 1516858727
+nic_queue_tx_bytes_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="1",percentile="99"} 11903
+nic_queue_tx_bytes_rate{iface="ens3",queue="1",percentile="99.9"} 22655
+# TYPE ip_frag_created counter
+ip_frag_created 0
+ip_frag_created_rate{percentile="50"} 0
+ip_frag_created_rate{percentile="90"} 0
+ip_frag_created_rate{percentile="99"} 0
+ip_frag_created_rate{percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu11"} 0
+cpu_usage_nice_rate{cpu="cpu11",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu11",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu11",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu11",percentile="99.9"} 0
+# TYPE memory_percpu gauge
+memory_percpu 52953088
+memory_percpu_value{percentile="50"} 53215231
+memory_percpu_value{percentile="90"} 53215231
+memory_percpu_value{percentile="99"} 53215231
+memory_percpu_value{percentile="99.9"} 53215231
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="1"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="1",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="1",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="1",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="1",percentile="99.9"} 0
+# TYPE nic_queue_tx_bytes counter
+nic_queue_tx_bytes{iface="ens3",queue="8"} 4181344436
+nic_queue_tx_bytes_rate{iface="ens3",queue="8",percentile="50"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="8",percentile="90"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="8",percentile="99"} 0
+nic_queue_tx_bytes_rate{iface="ens3",queue="8",percentile="99.9"} 0
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu0"} 0
+cpu_usage_nice_rate{cpu="cpu0",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu0",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu0",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu0",percentile="99.9"} 0
+# TYPE nic_queue_tx_dropped counter
+nic_queue_tx_dropped{iface="ens3",queue="2"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="2",percentile="50"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="2",percentile="90"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="2",percentile="99"} 0
+nic_queue_tx_dropped_rate{iface="ens3",queue="2",percentile="99.9"} 0
+# TYPE psi_cpu_full_avg60 gauge
+psi_cpu_full_avg60 0
+psi_cpu_full_avg60_value{percentile="50"} 0
+psi_cpu_full_avg60_value{percentile="90"} 0
+psi_cpu_full_avg60_value{percentile="99"} 0
+psi_cpu_full_avg60_value{percentile="99.9"} 0
+# TYPE ip_out_discards counter
+ip_out_discards 102
+ip_out_discards_rate{percentile="50"} 0
+ip_out_discards_rate{percentile="90"} 0
+ip_out_discards_rate{percentile="99"} 0
+ip_out_discards_rate{percentile="99.9"} 0
+# TYPE memory_memfree gauge
+memory_memfree 39471448064
+memory_memfree_value{percentile="50"} 39728447487
+memory_memfree_value{percentile="90"} 39728447487
+memory_memfree_value{percentile="99"} 39728447487
+memory_memfree_value{percentile="99.9"} 39728447487
+# TYPE network_receive_bytes counter
+network_receive_bytes{iface="tailscale0"} 0
+network_receive_bytes_rate{iface="tailscale0",percentile="50"} 0
+network_receive_bytes_rate{iface="tailscale0",percentile="90"} 0
+network_receive_bytes_rate{iface="tailscale0",percentile="99"} 0
+network_receive_bytes_rate{iface="tailscale0",percentile="99.9"} 0
+# TYPE softirq_tasklet counter
+softirq_tasklet 34840155
+softirq_tasklet_rate{percentile="50"} 0
+softirq_tasklet_rate{percentile="90"} 100
+softirq_tasklet_rate{percentile="99"} 131
+softirq_tasklet_rate{percentile="99.9"} 409
+# TYPE tcp_retransmits counter
+tcp_retransmits 0
+tcp_retransmits_rate{percentile="50"} 0
+tcp_retransmits_rate{percentile="90"} 0
+tcp_retransmits_rate{percentile="99"} 0
+tcp_retransmits_rate{percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu0"} 92000000
+cpu_usage_user_rate{cpu="cpu0",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu0",percentile="90"} 96993279
+cpu_usage_user_rate{cpu="cpu0",percentile="99"} 293601279
+cpu_usage_user_rate{cpu="cpu0",percentile="99.9"} 666894335
+# TYPE tcp_retrans_syn counter
+tcp_retrans_syn 3025
+tcp_retrans_syn_rate{percentile="50"} 0
+tcp_retrans_syn_rate{percentile="90"} 0
+tcp_retrans_syn_rate{percentile="99"} 0
+tcp_retrans_syn_rate{percentile="99.9"} 0
+# TYPE udp_sndbuf_errors counter
+udp_sndbuf_errors 0
+udp_sndbuf_errors_rate{percentile="50"} 0
+udp_sndbuf_errors_rate{percentile="90"} 0
+udp_sndbuf_errors_rate{percentile="99"} 0
+udp_sndbuf_errors_rate{percentile="99.9"} 0
+# TYPE nic_queue_rx_buff_alloc_err counter
+nic_queue_rx_buff_alloc_err{iface="ens3",queue="4"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="4",percentile="50"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="4",percentile="90"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="4",percentile="99"} 0
+nic_queue_rx_buff_alloc_err_rate{iface="ens3",queue="4",percentile="99.9"} 0
+# TYPE psi_memory_some_avg300 gauge
+psi_memory_some_avg300 0
+psi_memory_some_avg300_value{percentile="50"} 0
+psi_memory_some_avg300_value{percentile="90"} 0
+psi_memory_some_avg300_value{percentile="99"} 0
+psi_memory_some_avg300_value{percentile="99.9"} 0
+# TYPE tcp_abort_timeout counter
+tcp_abort_timeout 78
+tcp_abort_timeout_rate{percentile="50"} 0
+tcp_abort_timeout_rate{percentile="90"} 0
+tcp_abort_timeout_rate{percentile="99"} 0
+tcp_abort_timeout_rate{percentile="99.9"} 0
+# TYPE psi_cpu_some_avg60 gauge
+psi_cpu_some_avg60 79
+psi_cpu_some_avg60_value{percentile="50"} 78
+psi_cpu_some_avg60_value{percentile="90"} 79
+psi_cpu_some_avg60_value{percentile="99"} 81
+psi_cpu_some_avg60_value{percentile="99.9"} 81
+# TYPE network_transmit_dropped counter
+network_transmit_dropped{iface="docker0"} 0
+network_transmit_dropped_rate{iface="docker0",percentile="50"} 0
+network_transmit_dropped_rate{iface="docker0",percentile="90"} 0
+network_transmit_dropped_rate{iface="docker0",percentile="99"} 0
+network_transmit_dropped_rate{iface="docker0",percentile="99.9"} 0
+# TYPE cpu_usage_user counter
+cpu_usage_user{cpu="cpu7"} 20000000
+cpu_usage_user_rate{cpu="cpu7",percentile="50"} 0
+cpu_usage_user_rate{cpu="cpu7",percentile="90"} 0
+cpu_usage_user_rate{cpu="cpu7",percentile="99"} 106430463
+cpu_usage_user_rate{cpu="cpu7",percentile="99.9"} 318767103
+# TYPE psi_cpu_some_avg10 gauge
+psi_cpu_some_avg10 58
+psi_cpu_some_avg10_value{percentile="50"} 49
+psi_cpu_some_avg10_value{percentile="90"} 58
+psi_cpu_some_avg10_value{percentile="99"} 60
+psi_cpu_some_avg10_value{percentile="99.9"} 60
+# TYPE psi_io_full_avg60 gauge
+psi_io_full_avg60 0
+psi_io_full_avg60_value{percentile="50"} 0
+psi_io_full_avg60_value{percentile="90"} 0
+psi_io_full_avg60_value{percentile="99"} 0
+psi_io_full_avg60_value{percentile="99.9"} 0
+# TYPE memory_directmap1g gauge
+memory_directmap1g 63350767616
+memory_directmap1g_value{percentile="50"} 63619203071
+memory_directmap1g_value{percentile="90"} 63619203071
+memory_directmap1g_value{percentile="99"} 63619203071
+memory_directmap1g_value{percentile="99.9"} 63619203071
+# TYPE cpu_usage_nice counter
+cpu_usage_nice{cpu="cpu9"} 0
+cpu_usage_nice_rate{cpu="cpu9",percentile="50"} 0
+cpu_usage_nice_rate{cpu="cpu9",percentile="90"} 0
+cpu_usage_nice_rate{cpu="cpu9",percentile="99"} 0
+cpu_usage_nice_rate{cpu="cpu9",percentile="99.9"} 0
+# TYPE memory_committed_as gauge
+memory_committed_as 1440280576
+memory_committed_as_value{percentile="50"} 1224736767
+memory_committed_as_value{percentile="90"} 1392508927
+memory_committed_as_value{percentile="99"} 1434451967
+memory_committed_as_value{percentile="99.9"} 1434451967
+# TYPE ip_frag_failures counter
+ip_frag_failures 0
+ip_frag_failures_rate{percentile="50"} 0
+ip_frag_failures_rate{percentile="90"} 0
+ip_frag_failures_rate{percentile="99"} 0
+ip_frag_failures_rate{percentile="99.9"} 0
+# TYPE psi_memory_some_avg60 gauge
+psi_memory_some_avg60 0
+psi_memory_some_avg60_value{percentile="50"} 0
+psi_memory_some_avg60_value{percentile="90"} 0
+psi_memory_some_avg60_value{percentile="99"} 0
+psi_memory_some_avg60_value{percentile="99.9"} 0
+# TYPE softirq_sched counter
+softirq_sched 24774311
+softirq_sched_rate{percentile="50"} 1807
+softirq_sched_rate{percentile="90"} 2415
+softirq_sched_rate{percentile="99"} 3391
+softirq_sched_rate{percentile="99.9"} 5535
+# TYPE memory_shmemhugepages gauge
+memory_shmemhugepages 0
+memory_shmemhugepages_value{percentile="50"} 0
+memory_shmemhugepages_value{percentile="90"} 0
+memory_shmemhugepages_value{percentile="99"} 0
+memory_shmemhugepages_value{percentile="99.9"} 0
+# TYPE net_sockets_udp_inuse gauge
+net_sockets_udp_inuse 4
+net_sockets_udp_inuse_value{percentile="50"} 4
+net_sockets_udp_inuse_value{percentile="90"} 4
+net_sockets_udp_inuse_value{percentile="99"} 4
+net_sockets_udp_inuse_value{percentile="99.9"} 4
+# TYPE nic_queue_rx_packets counter
+nic_queue_rx_packets{iface="ens3",queue="5"} 5046786
+nic_queue_rx_packets_rate{iface="ens3",queue="5",percentile="50"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="5",percentile="90"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="5",percentile="99"} 0
+nic_queue_rx_packets_rate{iface="ens3",queue="5",percentile="99.9"} 0
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu3"} 107000000
+cpu_usage_system_rate{cpu="cpu3",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu3",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu3",percentile="99"} 876609535
+cpu_usage_system_rate{cpu="cpu3",percentile="99.9"} 1082130431
+# TYPE memory_vmallocused gauge
+memory_vmallocused 30105600
+memory_vmallocused_value{percentile="50"} 30146559
+memory_vmallocused_value{percentile="90"} 30146559
+memory_vmallocused_value{percentile="99"} 30277631
+memory_vmallocused_value{percentile="99.9"} 30277631
+# TYPE softirq_irq_poll counter
+softirq_irq_poll 0
+softirq_irq_poll_rate{percentile="50"} 0
+softirq_irq_poll_rate{percentile="90"} 0
+softirq_irq_poll_rate{percentile="99"} 0
+softirq_irq_poll_rate{percentile="99.9"} 0
+# TYPE memory_unevictable gauge
+memory_unevictable 27803648
+memory_unevictable_value{percentile="50"} 27918335
+memory_unevictable_value{percentile="90"} 27918335
+memory_unevictable_value{percentile="99"} 27918335
+memory_unevictable_value{percentile="99.9"} 27918335
+# TYPE cpu_usage_system counter
+cpu_usage_system{cpu="cpu14"} 189000000
+cpu_usage_system_rate{cpu="cpu14",percentile="50"} 0
+cpu_usage_system_rate{cpu="cpu14",percentile="90"} 0
+cpu_usage_system_rate{cpu="cpu14",percentile="99"} 994050047
+cpu_usage_system_rate{cpu="cpu14",percentile="99.9"} 1061158911
+# TYPE memory_directmap2m gauge
+memory_directmap2m 7310671872
+memory_directmap2m_value{percentile="50"} 7314866175
+memory_directmap2m_value{percentile="90"} 7314866175
+memory_directmap2m_value{percentile="99"} 7314866175
+memory_directmap2m_value{percentile="99.9"} 7314866175

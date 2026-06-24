@@ -17,6 +17,8 @@ const TCPEXT_METRICS: &[(&str, &str)] = &[
     ("tcp/window/zero_sent",     "TCPToZeroWindowAdv"),
     ("tcp/window/zero_recv",     "TCPFromZeroWindowAdv"),
     // Drop events — accept queue and receive queue saturation
+    ("tcp/drop/listen",          "ListenDrops"),
+    ("tcp/drop/listen_overflow", "ListenOverflows"),
     ("tcp/drop/backlog",         "TCPBacklogDrop"),
     ("tcp/drop/rcvq",            "TCPRcvQDrop"),
     ("tcp/drop/ofo",             "TCPOFODrop"),
@@ -87,3 +89,9 @@ mod tests {
         assert_eq!(reg.raw(backlog_id), 42);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "netstat",
+    init: |reg, iv| Box::new(NetstatSampler::new(reg, iv)),
+};

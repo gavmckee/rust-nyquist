@@ -23,5 +23,30 @@ max_cpus = 0
 hw_enabled = true
 sw_enabled = true
 
-[ebpf]
+# BPF cpu/usage replaces procfs cpu — disable procfs sampler to avoid scale conflict.
+[samplers.cpu]
+enabled = false
+
+[samplers."cpu/usage"]
+enabled = true
+
+[samplers."cpu/vtime"]
+enabled = true
+
+[samplers.network]
+enabled = false
+
+[samplers."network/traffic"]
+enabled = true
+
+[samplers."tcp/packet_latency"]
+enabled = true
+
+[samplers."tcp/retransmit"]
+enabled = true
+
+[samplers.disk]
+enabled = false
+
+[samplers."disk/blockio"]
 enabled = true

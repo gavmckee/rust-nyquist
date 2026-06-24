@@ -50,3 +50,9 @@ mod tests {
         assert_eq!(reg.metric_ids().len(), 4);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "disk",
+    init: |reg, iv| Box::new(DiskSampler::new(reg, iv)),
+};

@@ -22,7 +22,7 @@ impl AppState {
                 return snap.clone();
             }
         }
-        let snap = self.reg.snapshot(Instant::now(), &self.percentiles);
+        let snap = self.reg.snapshot(Instant::now());
         *cache = Some((Instant::now(), snap.clone()));
         snap
     }
@@ -61,12 +61,12 @@ impl HttpServer {
 
 async fn metrics(State(s): State<AppState>) -> impl IntoResponse {
     let snap = s.snapshot().await;
-    ([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], to_prometheus(&snap))
+    ([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], to_prometheus(&snap, &s.percentiles))
 }
 
 async fn metrics_json(State(s): State<AppState>) -> impl IntoResponse {
     let snap = s.snapshot().await;
-    ([(header::CONTENT_TYPE, "application/json")], to_json(&snap))
+    ([(header::CONTENT_TYPE, "application/json")], to_json(&snap, &s.percentiles))
 }
 
 async fn context(State(s): State<AppState>) -> impl IntoResponse {

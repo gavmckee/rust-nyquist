@@ -98,3 +98,9 @@ mod tests {
         assert_eq!(reg.metric_ids().len(), 12);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "network",
+    init: |reg, iv| Box::new(NetworkSampler::new(reg, iv)),
+};

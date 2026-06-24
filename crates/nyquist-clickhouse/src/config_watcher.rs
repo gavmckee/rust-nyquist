@@ -203,7 +203,11 @@ fn collect_config() -> Vec<(String, String)> {
         out.push((format!("ring.{iface}.tx"),             info.ring_tx.to_string()));
         out.push((format!("ring.{iface}.rx_max"),         info.ring_rx_max.to_string()));
         out.push((format!("mtu.{iface}"),                 info.mtu.to_string()));
+        out.push((format!("channels.{iface}.rx"),         info.rx_queues.to_string()));
+        out.push((format!("channels.{iface}.tx"),         info.tx_queues.to_string()));
         out.push((format!("channels.{iface}.combined"),   info.combined_queues.to_string()));
+        out.push((format!("rss.{iface}.table_size"),      info.rss_table_size.to_string()));
+        out.push((format!("msix.{iface}.vectors"),        info.msix_vectors.to_string()));
         out.push((format!("coalesce.{iface}.rx_usecs"),   info.coalesce_rx_usecs.to_string()));
         out.push((format!("coalesce.{iface}.tx_usecs"),   info.coalesce_tx_usecs.to_string()));
     }
@@ -236,9 +240,17 @@ fn fmt_note(key: &str, old: &str, new: &str) -> String {
         ["coalesce", iface, param] => {
             format!("coalesce.{param}: {old} → {new}  ({iface})")
         }
-        // Channel count
-        ["channels", iface, "combined"] => {
-            format!("channels.combined: {old} → {new}  ({iface})")
+        // Channel counts
+        ["channels", iface, param] => {
+            format!("channels.{param}: {old} → {new}  ({iface})")
+        }
+        // RSS indirection table size
+        ["rss", iface, "table_size"] => {
+            format!("rss.table_size: {old} → {new}  ({iface})")
+        }
+        // MSI-X vector count
+        ["msix", iface, "vectors"] => {
+            format!("msix.vectors: {old} → {new}  ({iface})")
         }
         _ => format!("{key}: {old} → {new}"),
     }

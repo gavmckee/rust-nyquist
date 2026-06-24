@@ -20,7 +20,6 @@ pub struct Config {
     pub clickhouse:       ClickHouseConfig,
     pub perf:             PerfConfig,
     pub victoria_metrics: VictoriaMetricsConfig,
-    pub ebpf:             EbpfConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -119,16 +118,6 @@ pub struct VictoriaMetricsConfig {
     pub push_interval: Duration,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
-pub struct EbpfConfig {
-    pub enabled: bool,
-}
-
-impl Default for EbpfConfig {
-    fn default() -> Self { EbpfConfig { enabled: false } }
-}
-
 impl Default for VictoriaMetricsConfig {
     fn default() -> Self {
         VictoriaMetricsConfig {
@@ -161,7 +150,6 @@ impl Default for Config {
             clickhouse:       ClickHouseConfig::default(),
             perf:             PerfConfig::default(),
             victoria_metrics: VictoriaMetricsConfig::default(),
-            ebpf:             EbpfConfig::default(),
         }
     }
 }

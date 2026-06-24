@@ -68,6 +68,18 @@ impl SlidingHistogram {
         let acc = self.merge_window(now);
         ps.iter().map(|&p| compute_percentile(&acc, p)).collect()
     }
+
+    /// Merge the window and return the non-empty H2 buckets as
+    /// `(upper_bound, count)` pairs in ascending order. This is the
+    /// downstream bucket-array representation (design §3.4); consumers
+    /// compute percentiles from it via `percentiles_from_buckets`.
+    pub fn bucket_counts(&mut self, now: Instant) -> Vec<(u64, u64)> {
+        let acc = self.merge_window(now);
+        acc.iter()
+            .filter(|b| b.count() > 0)
+            .map(|b| (b.end(), b.count()))
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -84,6 +96,25 @@ mod tests {
         }
         let p50 = h.percentile(t0 + Duration::from_millis(999), 50.0);
         assert!((41..=43).contains(&p50), "p50 was {p50}");
+    }
+
+    #[test]
+    fn bucket_counts_are_sparse_and_ascending() {
+        let mut h = SlidingHistogram::new(Duration::from_millis(100), Duration::from_secs(1));
+        let t0 = Instant::now();
+        for _ in 0..10 { h.record(t0, 5); }
+        for _ in 0..3 { h.record(t0, 1000); }
+        let buckets = h.bucket_counts(t0 + Duration::from_millis(50));
+        // Non-empty buckets only.
+        assert!(buckets.iter().all(|&(_, c)| c > 0), "empty bucket leaked: {buckets:?}");
+        // Ascending by upper bound.
+        let bounds: Vec<u64> = buckets.iter().map(|&(b, _)| b).collect();
+        let mut sorted = bounds.clone();
+        sorted.sort_unstable();
+        assert_eq!(bounds, sorted, "buckets not ascending: {buckets:?}");
+        // Total count is preserved.
+        let total: u64 = buckets.iter().map(|&(_, c)| c).sum();
+        assert_eq!(total, 13, "total count wrong: {buckets:?}");
     }
 
     #[test]

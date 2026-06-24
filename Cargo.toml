@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
-# nyquist-ebpf-programs targets bpfel-unknown-none (not the host); it is compiled
-# by nyquist-ebpf's build.rs via aya-build rather than as a workspace member.
-exclude = ["crates/nyquist-ebpf-programs"]
 
 [package]
 name = "nyquist"

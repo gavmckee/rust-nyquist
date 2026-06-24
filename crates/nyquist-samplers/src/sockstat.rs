@@ -57,3 +57,9 @@ mod tests {
         assert_eq!(reg.raw(ids[1]), 5);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "sockstat",
+    init: |reg, iv| Box::new(SockstatSampler::new(reg, iv)),
+};

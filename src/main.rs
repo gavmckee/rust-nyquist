@@ -7,7 +7,6 @@ use nyquist_core::scheduler::{spawn_sampler, spawn_sink};
 use nyquist_exposition::{HttpServer, VictoriaMetricsSink};
 use nyquist_samplers::inventory::build_enabled;
 use nyquist_perf::build_perf_enabled;
-use nyquist_ebpf::EbpfSampler;
 
 #[derive(Parser)]
 #[command(name = "nyquist", about = "High-resolution oversampling telemetry agent")]
@@ -75,7 +74,6 @@ async fn main() -> anyhow::Result<()> {
             Box::new(sink),
             reg.clone(),
             config.recorder.flush_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         tracing::info!(
@@ -97,7 +95,6 @@ async fn main() -> anyhow::Result<()> {
             Box::new(sink),
             reg.clone(),
             ch.insert_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         // Config watcher: polls sysconfig every 5s, writes sysconfig_values for
@@ -113,19 +110,14 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!(url = %ch.url, database = %ch.database, "ClickHouse sink + config watcher enabled");
     }
 
-    if config.ebpf.enabled {
-        let ebpf_sampler = EbpfSampler::new(config.general.default_interval);
-        handles.push(spawn_sampler(Box::new(ebpf_sampler), reg.clone(), config.general.fault_tolerant));
-        tracing::info!("eBPF sampler enabled (tcp_probe + tcp_retransmit_skb)");
-    }
+    tracing::info!(registered = nyquist_ebpf::registered(), "samplers registered (incl. BPF)");
 
     if config.victoria_metrics.enabled {
-        let sink = VictoriaMetricsSink::new(&config.victoria_metrics.url);
+        let sink = VictoriaMetricsSink::new(&config.victoria_metrics.url, config.general.percentiles.clone());
         handles.push(spawn_sink(
             Box::new(sink),
             reg.clone(),
             config.victoria_metrics.push_interval,
-            config.general.percentiles.clone(),
             config.general.fault_tolerant,
         ));
         tracing::info!(url = %config.victoria_metrics.url, "VictoriaMetrics push enabled");

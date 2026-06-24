@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>nyquist — High-Resolution Systems Telemetry</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── reset & base ──────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#060d1a;color:#e2e8f0}
+
+/* ── deck container ────────────────────────────────────────────────────────── */
+#deck{width:100%;height:100%;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:3.5rem 5rem 4rem;opacity:0;pointer-events:none;
+  transition:opacity .4s ease,transform .4s ease;transform:translateX(60px)}
+.slide.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+
+/* ── nav ───────────────────────────────────────────────────────────────────── */
+#nav{position:fixed;bottom:1.6rem;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:1rem;z-index:99}
+.nav-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  color:#94a3b8;border-radius:.5rem;padding:.45rem .9rem;cursor:pointer;
+  font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;transition:all .2s}
+.nav-btn:hover{background:rgba(59,130,246,.2);border-color:#3b82f6;color:#93c5fd}
+#slide-ctr{font-size:.75rem;color:#475569;min-width:4rem;text-align:center}
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:#3b82f6;
+  transition:width .35s ease;z-index:100}
+#slide-label{position:fixed;top:1rem;right:1.5rem;font-size:.7rem;
+  color:#334155;letter-spacing:.08em;text-transform:uppercase}
+
+/* ── typography helpers ────────────────────────────────────────────────────── */
+.tag{display:inline-block;padding:.2rem .65rem;border-radius:.35rem;
+  font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.tag-red {background:#7f1d1d;color:#fca5a5}
+.tag-grn {background:#14532d;color:#86efac}
+.tag-ylw {background:#713f12;color:#fde68a}
+.tag-blue{background:#1e3a5f;color:#93c5fd}
+.tag-pur {background:#4a1d96;color:#c4b5fd}
+
+.big{font-size:3.5rem;font-weight:800;line-height:1.1}
+.med{font-size:2rem;font-weight:700;line-height:1.2}
+.kpi{font-size:2.8rem;font-weight:800}
+.muted{color:#64748b}
+.accent{color:#38bdf8}
+.orange{color:#fb923c}
+.red{color:#f87171}
+.green{color:#4ade80}
+
+/* ── layout ────────────────────────────────────────────────────────────────── */
+.slide-title{font-size:1.1rem;font-weight:700;color:#93c5fd;
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:.35rem}
+.slide-head{font-size:2rem;font-weight:800;color:#f1f5f9;
+  margin-bottom:.25rem;line-height:1.2}
+.slide-sub{color:#64748b;font-size:.9rem;margin-bottom:1.5rem}
+
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;flex:1;min-height:0}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;flex:1;min-height:0}
+.col{display:flex;flex-direction:column;gap:.75rem;min-height:0}
+
+.card{background:#0f1f38;border:1px solid #1e3a5f;border-radius:.75rem;
+  padding:1.2rem;flex:1;min-height:0;display:flex;flex-direction:column}
+.card h4{font-size:.75rem;color:#64748b;text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:.5rem}
+
+.stat-block{background:#0f1f38;border:1px solid #1e3a5f;border-radius:.75rem;
+  padding:1.2rem;text-align:center}
+.stat-val{font-size:2.5rem;font-weight:800;color:#38bdf8;line-height:1}
+.stat-lbl{font-size:.72rem;color:#64748b;text-transform:uppercase;
+  letter-spacing:.06em;margin-top:.3rem}
+.stat-sub{font-size:.8rem;color:#475569;margin-top:.2rem}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+
+/* ── highlight box ─────────────────────────────────────────────────────────── */
+.hl-red {background:#1a0a0a;border-left:3px solid #ef4444;padding:.75rem 1rem;
+  border-radius:0 .5rem .5rem 0;font-size:.85rem}
+.hl-grn {background:#071a10;border-left:3px solid #22c55e;padding:.75rem 1rem;
+  border-radius:0 .5rem .5rem 0;font-size:.85rem}
+.hl-blue{background:#071020;border-left:3px solid #3b82f6;padding:.75rem 1rem;
+  border-radius:0 .5rem .5rem 0;font-size:.85rem}
+
+/* ── canvas sizing ─────────────────────────────────────────────────────────── */
+.chart-wrap{flex:1;min-height:0;position:relative}
+.chart-wrap canvas{width:100%!important}
+
+/* ── bottleneck bar ────────────────────────────────────────────────────────── */
+.bn-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem}
+.bn-lbl{width:200px;font-size:.8rem;color:#94a3b8;flex-shrink:0}
+.bn-bg {flex:1;background:#0b1628;border-radius:.25rem;height:28px;overflow:hidden}
+.bn-fill{height:100%;border-radius:.25rem;display:flex;align-items:center;
+  padding:0 .7rem;font-size:.72rem;font-weight:700;white-space:nowrap}
+
+/* ── arch diagram ──────────────────────────────────────────────────────────── */
+.arch{display:flex;flex-direction:column;align-items:center;
+  gap:0;flex:1;min-height:0;justify-content:center}
+.arch-layer{display:flex;gap:.6rem;justify-content:center;align-items:stretch;
+  width:100%;margin-bottom:.3rem}
+.arch-box{background:#0f1f38;border:1px solid #1e3a5f;border-radius:.6rem;
+  padding:.6rem 1rem;font-size:.78rem;font-weight:600;color:#93c5fd;
+  text-align:center;flex:1;max-width:160px;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:.2rem}
+.arch-box small{font-size:.65rem;color:#475569;font-weight:400}
+.arch-arrow{color:#334155;font-size:.9rem;margin:.1rem 0;text-align:center}
+.arch-label{font-size:.7rem;color:#334155;text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:.2rem;text-align:center}
+
+/* ── metric grid ────────────────────────────────────────────────────────────── */
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;flex:1;min-height:0}
+.metric-item{background:#0f1f38;border:1px solid #1e3a5f;border-radius:.6rem;
+  padding:.85rem;display:flex;flex-direction:column;gap:.3rem}
+.metric-icon{font-size:1.4rem}
+.metric-name{font-size:.78rem;font-weight:700;color:#93c5fd}
+.metric-desc{font-size:.7rem;color:#475569;line-height:1.4}
+.metric-freq{font-size:.65rem;color:#1e3a5f;font-weight:700;letter-spacing:.05em}
+
+/* ── comparison table ──────────────────────────────────────────────────────── */
+.cmp-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.cmp-table th{background:#071020;color:#64748b;text-transform:uppercase;
+  font-size:.7rem;letter-spacing:.07em;padding:.6rem .9rem;text-align:left}
+.cmp-table td{padding:.55rem .9rem;border-bottom:1px solid #0f1f38}
+.cmp-table tr:hover td{background:#0f1f38}
+
+/* ── title slide ────────────────────────────────────────────────────────────── */
+#s0{background:radial-gradient(ellipse at 20% 50%,#071838 0%,#060d1a 60%)}
+#s0 .logo{font-size:5rem;font-weight:900;letter-spacing:-.05em;
+  background:linear-gradient(135deg,#38bdf8,#6366f1);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:.5rem;line-height:1}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="slide-label"></div>
+
+<div id="deck">
+
+<!-- ══ SLIDE 0 — TITLE ══════════════════════════════════════════════════════ -->
+<div class="slide active" id="s0">
+  <div style="display:flex;flex-direction:column;justify-content:center;height:100%;max-width:800px">
+    <div class="logo">nyquist</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#f1f5f9;margin-bottom:.75rem;line-height:1.3">
+      High-Resolution Systems Telemetry<br>
+      <span style="color:#475569;font-weight:400;font-size:1.1rem">
+        10 ms sampling · sliding percentile histograms · eBPF + perf_events
+      </span>
+    </div>
+    <div style="color:#334155;font-size:.9rem;margin-bottom:2.5rem">
+      Demonstrated on a 100 GbE throughput problem — root cause in minutes, not hours
+    </div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <span class="tag tag-blue">10 ms sampling</span>
+      <span class="tag tag-pur">eBPF tracing</span>
+      <span class="tag tag-ylw">GPU / NVML</span>
+      <span class="tag tag-blue">ClickHouse + VictoriaMetrics</span>
+      <span class="tag tag-blue">Grafana dashboards</span>
+    </div>
+    <div style="position:absolute;right:5rem;top:50%;transform:translateY(-50%);
+      opacity:.04;font-size:18rem;font-weight:900;pointer-events:none">N</div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 1 — THE SAMPLING GAP ══════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="slide-title">The Problem</div>
+  <div class="slide-head">Traditional monitoring leaves you blind</div>
+  <div class="slide-sub">60-second polling averages away the events that matter most</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="col">
+      <div class="card" style="flex:1">
+        <h4>Traditional — 60 s polling</h4>
+        <div class="chart-wrap"><canvas id="tradChart"></canvas></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="flex:1">
+        <h4>nyquist — 10 ms sampling (same window)</h4>
+        <div class="chart-wrap"><canvas id="hiresChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem">
+    <div class="hl-red">
+      <strong class="red">60 s poll</strong> — one data point per minute.<br>
+      CPU spikes, queue saturation and burst drops are invisible.
+    </div>
+    <div class="hl-blue">
+      <strong class="accent">10 ms samples</strong> — 6,000 observations per minute.<br>
+      Variance, spikes and recovery all captured in percentiles.
+    </div>
+    <div class="hl-grn">
+      <strong class="green">Percentiles preserved</strong> — p50/p90/p99/p99.9 across a 60 s sliding window. No aggregation loss.
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 2 — NYQUIST THEOREM ════════════════════════════════════════════ -->
+<div class="slide" id="s_nq">
+  <div class="slide-title">The Theory</div>
+  <div class="slide-head">Nyquist-Shannon: your sample rate defines what you can see</div>
+  <div class="slide-sub">To faithfully reconstruct a signal you must sample at ≥ 2× its highest frequency — events shorter than your sample interval are permanently invisible</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="col">
+      <div class="card" style="flex:1">
+        <h4>Same 5 seconds of network events — two sampling rates</h4>
+        <div class="chart-wrap"><canvas id="nqChart"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-top:.75rem">
+        <div class="stat-block" style="padding:.75rem">
+          <div class="stat-val" style="font-size:1.8rem;color:#ef4444">30 s</div>
+          <div class="stat-lbl">blind spot</div>
+          <div class="stat-sub">60 s poller</div>
+        </div>
+        <div class="stat-block" style="padding:.75rem">
+          <div class="stat-val" style="font-size:1.8rem;color:#fb923c">500 ms</div>
+          <div class="stat-lbl">blind spot</div>
+          <div class="stat-sub">1 s poller</div>
+        </div>
+        <div class="stat-block" style="padding:.75rem">
+          <div class="stat-val" style="font-size:1.8rem;color:#4ade80">20 ms</div>
+          <div class="stat-lbl">blind spot</div>
+          <div class="stat-sub">nyquist 10 ms</div>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="gap:.85rem">
+      <div class="hl-blue" style="font-size:.88rem;line-height:1.65">
+        <strong class="accent">The theorem, plainly:</strong> a sampler running at <em>f<sub>s</sub></em> can only detect events lasting longer than <strong>2 / f<sub>s</sub></strong>.
+        Below that threshold the event produces zero samples — it does not exist to your monitoring system.
+        One lone sample is not a measurement, it is noise.
+      </div>
+      <div class="card" style="padding:1rem">
+        <h4>Applied to networking</h4>
+        <div style="display:flex;flex-direction:column;gap:.7rem;margin-top:.5rem">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem .8rem;align-items:start">
+            <span class="tag tag-red">60 s poll</span>
+            <span style="font-size:.82rem;color:#94a3b8">Only detects events lasting ≥ <strong class="red">30 seconds</strong>. A NIC ring overflow that clears in 50 ms registers as zero data points — completely silent.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem .8rem;align-items:start">
+            <span class="tag tag-ylw">1 s poll</span>
+            <span style="font-size:.82rem;color:#94a3b8">Detects events lasting ≥ <strong class="orange">500 ms</strong>. TCP micro-bursts (100–200 ms) and softirq spikes still vanish between samples.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem .8rem;align-items:start">
+            <span class="tag tag-grn">10 ms nyquist</span>
+            <span style="font-size:.82rem;color:#94a3b8">Detects events lasting ≥ <strong class="green">20 ms</strong>. Captures ring overflows, softirq saturation spikes, and TCP burst drops with 5× headroom above the Nyquist limit.</span>
+          </div>
+        </div>
+      </div>
+      <div class="hl-grn" style="font-size:.82rem">
+        <strong class="green">Why this matters for the case study ahead:</strong> the RSS queue imbalance manifests as 50–80 ms CPU softirq saturation bursts on 8 cores. A 1-second poller has a ~7% chance of catching any single spike. nyquist catches every one — and correlates them with queue depth and retransmit events in the same 10 ms window.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 3 — DESIGN PRINCIPLES ═════════════════════════════════════════ -->
+<div class="slide" id="s_dp">
+  <div class="slide-title">Design Principles</div>
+  <div class="slide-head">Six decisions that separate observability from monitoring</div>
+  <div class="slide-sub">Each principle addresses a specific failure mode in traditional monitoring tools</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem;flex:1;min-height:0;margin-top:.4rem">
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">📡</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Sample at the Nyquist limit</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">10 ms sampling interval, not a 60 s poll. An event that clears before the next sample never happened, as far as your monitoring system is concerned. Most network incidents live in the 50–500 ms range.</div>
+      <span class="tag tag-blue" style="width:fit-content;font-size:.63rem">100 Hz sample rate · 50 Hz Nyquist limit</span>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">📊</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Preserve the distribution</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">Averages erase the tail — and the tail is where incidents live. nyquist feeds every 10 ms observation into a sliding HDR histogram and exports p50 / p90 / p99 / p99.9. Nothing is discarded.</div>
+      <span class="tag tag-pur" style="width:fit-content;font-size:.63rem">60 s window · 6,000 samples per metric</span>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">🧬</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Kernel-authoritative data</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">Read from /proc and eBPF tracepoints directly. User-space wrappers can be stale, batched, or wrong. The kernel counter is the ground truth — go as close to the source as possible.</div>
+      <span class="tag tag-blue" style="width:fit-content;font-size:.63rem">procfs · eBPF · perf_events · netlink</span>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">⏱</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Temporal alignment</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">Every metric — NIC queue depth, TCP RTT, CPU softirq, memory pressure — is sampled on the same 10 ms wall-clock tick. Cross-layer causality is only valid when metrics share a timestamp.</div>
+      <span class="tag tag-ylw" style="width:fit-content;font-size:.63rem">single scheduler · one clock source</span>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">🦀</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Zero external dependencies</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">A single statically-linked Rust binary. No agents, sidecars, JVM, or Python runtime. Drop it on any Linux host and it runs immediately. Gracefully degrades to procfs-only without root privileges.</div>
+      <span class="tag tag-grn" style="width:fit-content;font-size:.63rem">root: +eBPF +perf · non-root: procfs only</span>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:.45rem">
+      <div style="font-size:1.5rem">🔀</div>
+      <div style="font-size:.88rem;font-weight:700;color:#38bdf8">Decouple collection from export</div>
+      <div style="font-size:.78rem;color:#94a3b8;line-height:1.55;flex:1">Collection runs at 100 Hz; export pushes every 10 s. A slow VictoriaMetrics write or ClickHouse insert can never stall a sensor read. Rate mismatch between collection and reporting is a deliberate design goal, not an accident.</div>
+      <span class="tag tag-blue" style="width:fit-content;font-size:.63rem">collect 100 Hz · push 0.1 Hz</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 4 — ARCHITECTURE ═══════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-title">Architecture</div>
+  <div class="slide-head">From kernel signals to actionable intelligence</div>
+  <div class="slide-sub">All metric collection happens in a single Rust agent with zero external dependencies</div>
+  <div style="flex:1;display:flex;gap:3rem;min-height:0">
+    <div class="arch" style="flex:1">
+      <div class="arch-label">Data Sources</div>
+      <div class="arch-layer">
+        <div class="arch-box" style="border-color:#1e3a8a">
+          📂 /proc/net<br>/proc/stat
+          <small>network, cpu, memory<br>disk, sockets, PSI</small>
+        </div>
+        <div class="arch-box" style="border-color:#1e3a8a">
+          ⚡ eBPF<br>tracepoints
+          <small>tcp_probe RTT<br>tcp_retransmit_skb</small>
+        </div>
+        <div class="arch-box" style="border-color:#1e3a8a">
+          🔧 perf_events<br>HW counters
+          <small>instructions<br>cache/branch misses</small>
+        </div>
+        <div class="arch-box" style="border-color:#1e3a8a">
+          🌐 netlink<br>ethtool
+          <small>NIC rings, RSS<br>per-queue stats</small>
+        </div>
+        <div class="arch-box" style="border-color:#1e3a8a">
+          🎮 NVML<br>GPU metrics
+          <small>SM util, mem BW<br>power, temperature</small>
+        </div>
+      </div>
+      <div class="arch-arrow">▼ 10 ms intervals</div>
+      <div class="arch-layer">
+        <div class="arch-box" style="flex:none;width:420px;max-width:100%;
+          border-color:#3b82f6;background:#071020">
+          🦀 nyquist agent
+          <small>Sliding histogram registry · p50/p90/p99/p99.9<br>
+          60 s window · lock-free per-metric buckets</small>
+        </div>
+      </div>
+      <div class="arch-arrow">▼ push / scrape</div>
+      <div class="arch-layer">
+        <div class="arch-box" style="border-color:#7c3aed">
+          📊 :9100/metrics<br>Prometheus scrape
+          <small>pull-based export</small>
+        </div>
+        <div class="arch-box" style="border-color:#7c3aed">
+          📡 VictoriaMetrics<br>RemoteWrite
+          <small>push every 10 s</small>
+        </div>
+        <div class="arch-box" style="border-color:#7c3aed">
+          🗄️ ClickHouse<br>INSERT
+          <small>narrow schema<br>push every 10 s</small>
+        </div>
+      </div>
+      <div class="arch-arrow">▼</div>
+      <div class="arch-layer">
+        <div class="arch-box" style="flex:none;width:340px;max-width:100%;
+          border-color:#0891b2;background:#071020">
+          📈 Grafana
+          <small>Dual datasource · 53-panel dashboard<br>
+          VM (PromQL) + ClickHouse (SQL) side by side</small>
+        </div>
+      </div>
+    </div>
+    <div style="width:280px;display:flex;flex-direction:column;gap:.75rem">
+      <div class="metric-item">
+        <div class="metric-name">⏱  Sampling interval</div>
+        <div class="metric-desc">10 ms — captures sub-second events invisible to minute-level polling</div>
+        <div class="metric-freq">6,000 samples / metric / minute</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-name">📐  Sliding window</div>
+        <div class="metric-desc">60 s window, updated every 10 ms. Always shows the last minute's distribution.</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-name">📊  Percentile preservation</div>
+        <div class="metric-desc">p50 · p90 · p99 · p99.9 — high-frequency samples fed into HDR histogram buckets</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-name">🔬  eBPF RTT tracking</div>
+        <div class="metric-desc">Per-flow TCP RTT from kernel tcp_probe. 1-in-128 sampling keeps overhead &lt;0.1%.</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-name">🗃  Dual storage</div>
+        <div class="metric-desc">VictoriaMetrics for live dashboards. ClickHouse for long-term SQL analysis.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE — SAMPLING PIPELINE ════════════════════════════════════════════ -->
+<div class="slide" id="s_pipeline">
+  <div class="slide-title">The Mechanism</div>
+  <div class="slide-head">From a raw kernel counter to a stable p99</div>
+  <div class="slide-sub">Five stages turn ~6,000 instantaneous rate samples per minute into one percentile readout — refreshed continuously</div>
+
+  <div style="flex:1;display:flex;flex-direction:column;gap:.85rem;min-height:0">
+
+    <!-- horizontal pipeline -->
+    <div style="display:flex;align-items:stretch;gap:.35rem">
+      <div class="card" style="padding:.8rem;gap:.35rem;border-color:#1e3a8a">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#1e3a5f;color:#93c5fd;font-weight:800;font-size:.8rem">1</span>
+          <span class="tag tag-blue" style="font-size:.6rem">every 10 ms</span>
+        </div>
+        <div style="font-weight:700;color:#93c5fd;font-size:.82rem">Read &amp; rate</div>
+        <div style="font-size:.7rem;color:#94a3b8;line-height:1.45;flex:1">Each sampler reads its source (<code style="font-size:.66rem;color:#7dd3fc">/proc/net/dev</code>) and converts the counter delta into an instantaneous rate.</div>
+        <code style="font-size:.64rem;color:#7dd3fc;background:#071020;padding:.3rem .4rem;border-radius:.3rem;line-height:1.4;display:block">rate = Δcounter / 0.010 s<br>→ bytes / second</code>
+      </div>
+      <div style="align-self:center;color:#334155;font-size:1rem">▶</div>
+
+      <div class="card" style="padding:.8rem;gap:.35rem;border-color:#1e3a8a">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#1e3a5f;color:#93c5fd;font-weight:800;font-size:.8rem">2</span>
+          <span class="tag tag-pur" style="font-size:.6rem">100 ms slice</span>
+        </div>
+        <div style="font-weight:700;color:#93c5fd;font-size:.82rem">Bucket into a slice</div>
+        <div style="font-size:.7rem;color:#94a3b8;line-height:1.45;flex:1">~10 rate values land in each 100 ms slice. A slice is a fixed inline array — it stores <strong>raw values</strong>, not bucket counts. The HDR histogram is built on-demand at merge time.</div>
+        <code style="font-size:.64rem;color:#7dd3fc;background:#071020;padding:.3rem .4rem;border-radius:.3rem;line-height:1.4;display:block">~10 samples → 1 slice<br>O(1) insert</code>
+      </div>
+      <div style="align-self:center;color:#334155;font-size:1rem">▶</div>
+
+      <div class="card" style="padding:.8rem;gap:.35rem;border-color:#3b82f6;background:#071020">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#1e40af;color:#bfdbfe;font-weight:800;font-size:.8rem">3</span>
+          <span class="tag tag-blue" style="font-size:.6rem">60 s window</span>
+        </div>
+        <div style="font-weight:700;color:#93c5fd;font-size:.82rem">Slide the window</div>
+        <div style="font-size:.7rem;color:#94a3b8;line-height:1.45;flex:1">A ring buffer of 600 slices. Every 100 ms the oldest slice is evicted and a fresh one appended — always the last 60 seconds.</div>
+        <code style="font-size:.64rem;color:#7dd3fc;background:#060d1a;padding:.3rem .4rem;border-radius:.3rem;line-height:1.4;display:block">600 slices = 60 s / 100 ms</code>
+      </div>
+      <div style="align-self:center;color:#334155;font-size:1rem">▶</div>
+
+      <div class="card" style="padding:.8rem;gap:.35rem;border-color:#1e3a8a">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#1e3a5f;color:#93c5fd;font-weight:800;font-size:.8rem">4</span>
+          <span class="tag tag-grn" style="font-size:.6rem">on snapshot</span>
+        </div>
+        <div style="font-weight:700;color:#93c5fd;font-size:.82rem">Merge &amp; read</div>
+        <div style="font-size:.7rem;color:#94a3b8;line-height:1.45;flex:1">All 600 slices are summed into one aggregate histogram, then p50 / p90 / p99 / p99.9 are read straight from it.</div>
+        <code style="font-size:.64rem;color:#7dd3fc;background:#071020;padding:.3rem .4rem;border-radius:.3rem;line-height:1.4;display:block">Σ buckets → percentiles</code>
+      </div>
+      <div style="align-self:center;color:#334155;font-size:1rem">▶</div>
+
+      <div class="card" style="padding:.8rem;gap:.35rem;border-color:#7c3aed">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#4a1d96;color:#c4b5fd;font-weight:800;font-size:.8rem">5</span>
+          <span class="tag tag-pur" style="font-size:.6rem">every ~10 s</span>
+        </div>
+        <div style="font-weight:700;color:#93c5fd;font-size:.82rem">Export</div>
+        <div style="font-size:.7rem;color:#94a3b8;line-height:1.45;flex:1">One row per metric is written to <code style="font-size:.66rem;color:#7dd3fc">nyquist_live.samples</code> — a point-in-time view of the last 60 s.</div>
+        <code style="font-size:.64rem;color:#7dd3fc;background:#071020;padding:.3rem .4rem;border-radius:.3rem;line-height:1.4;display:block">ClickHouse + Prometheus</code>
+      </div>
+    </div>
+
+    <!-- lower detail: ring buffer + percentiles -->
+    <div style="flex:1;display:grid;grid-template-columns:1.25fr 1fr;gap:1rem;min-height:0">
+      <div class="card" style="gap:.6rem">
+        <h4>The 60 s window — 600 × 100 ms slices</h4>
+        <div style="display:flex;justify-content:space-between;font-size:.66rem;color:#64748b">
+          <span>◀ slice₀ — evicted every 100 ms</span>
+          <span>slice₅₉₉ — appended ▶</span>
+        </div>
+        <div style="height:34px;border-radius:.35rem;border:1px solid #1e3a5f;
+          background-image:repeating-linear-gradient(90deg,rgba(6,13,26,.55) 0 1px,transparent 1px 9px),
+            linear-gradient(90deg,#0b1628 0%,#1e3a8a 65%,#3b82f6 100%)"></div>
+        <div style="font-size:.72rem;color:#94a3b8;line-height:1.5">
+          Each slice is a compact inline <code style="font-size:.66rem;color:#7dd3fc">u64</code> array of the ~10 raw rate values collected in its 100 ms span. The HDR histogram is built on-demand by merging all in-window slices at snapshot time — never kept live per slot.
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.1rem">
+          <span class="tag tag-blue" style="font-size:.62rem">600 slices</span>
+          <span class="tag tag-blue" style="font-size:.62rem">~6,000 samples / metric</span>
+          <span class="tag tag-grn" style="font-size:.62rem">O(1) eviction</span>
+        </div>
+      </div>
+
+      <div class="card" style="gap:.6rem">
+        <h4>Snapshot → merge → percentiles</h4>
+        <code style="font-size:.7rem;color:#7dd3fc;background:#071020;padding:.45rem .6rem;border-radius:.4rem;display:block">merge(slice₀ … slice₅₉₉) → one histogram</code>
+        <div style="display:flex;gap:.45rem">
+          <div style="flex:1;background:#0b1628;border:1px solid #1e3a5f;border-radius:.4rem;padding:.4rem;text-align:center">
+            <div style="font-weight:800;color:#38bdf8;font-size:.95rem">p50</div>
+            <div style="font-size:.58rem;color:#64748b">median</div>
+          </div>
+          <div style="flex:1;background:#0b1628;border:1px solid #1e3a5f;border-radius:.4rem;padding:.4rem;text-align:center">
+            <div style="font-weight:800;color:#818cf8;font-size:.95rem">p90</div>
+            <div style="font-size:.58rem;color:#64748b">typical tail</div>
+          </div>
+          <div style="flex:1;background:#0b1628;border:1px solid #1e3a5f;border-radius:.4rem;padding:.4rem;text-align:center">
+            <div style="font-weight:800;color:#fb923c;font-size:.95rem">p99</div>
+            <div style="font-size:.58rem;color:#64748b">bursts</div>
+          </div>
+          <div style="flex:1;background:#0b1628;border:1px solid #1e3a5f;border-radius:.4rem;padding:.4rem;text-align:center">
+            <div style="font-weight:800;color:#f87171;font-size:.95rem">p99.9</div>
+            <div style="font-size:.58rem;color:#64748b">worst case</div>
+          </div>
+        </div>
+        <div class="hl-blue" style="font-size:.74rem;line-height:1.5">
+          <strong class="accent">p99 reads as:</strong> over the last 60 s, 99% of the 10 ms rate measurements were at or below this value — a burst a plain average would smooth away.
+        </div>
+      </div>
+    </div>
+
+    <!-- practical consequence -->
+    <div class="hl-grn" style="font-size:.8rem;line-height:1.5">
+      <strong class="green">The practical consequence:</strong> the p99 in Grafana or ClickHouse is the 99th percentile of ~6,000 instantaneous rate measurements from the last 60 seconds — sensitive enough to catch a 10 ms burst, stable enough not to be noisy.
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 3 — WHAT WE MEASURE ════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-title">Telemetry Coverage</div>
+  <div class="slide-head">Every layer of the system stack, at 10 ms resolution</div>
+  <div class="slide-sub">CPU, GPU, NIC, network stack, storage — 53 Grafana panels, dual-sourced from VictoriaMetrics and ClickHouse</div>
+  <div class="metric-grid" style="margin-top:.5rem">
+    <div class="metric-item">
+      <div class="metric-icon">🌐</div>
+      <div class="metric-name">NIC & RSS</div>
+      <div class="metric-desc">Per-queue RX/TX pps, rx_missed, rx_out_of_buffer, RSS imbalance CV%, per-queue ring overflows</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">🔄</div>
+      <div class="metric-name">TCP Health</div>
+      <div class="metric-desc">RTT (inet_diag + eBPF), retransmit types, window pressure, OFO queue, DSACK, TIME_WAIT</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">🧠</div>
+      <div class="metric-name">CPU & Softirq</div>
+      <div class="metric-desc">Per-core user/system/softirq/irq/iowait %, per-type softirq rates (NET_RX, NET_TX, SCHED, RCU…)</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">⚡</div>
+      <div class="metric-name">Hardware Perf</div>
+      <div class="metric-desc">Instructions/s, cache misses, branch mispredictions, context switches via perf_events</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">💾</div>
+      <div class="metric-name">Memory & PSI</div>
+      <div class="metric-desc">memavail/memtotal, PSI cpu/memory/io some & full avg10/avg60 — pressure-stall indicators</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">📡</div>
+      <div class="metric-name">eBPF Tracing</div>
+      <div class="metric-desc">Per-flow TCP RTT from tcp_probe (1/128 sampled), retransmit events from tcp_retransmit_skb</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">🛣️</div>
+      <div class="metric-name">IP / ICMP</div>
+      <div class="metric-desc">Fragmentation failures (PMTUD signal), ICMP unreachables, IP discards, routing errors</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">💿</div>
+      <div class="metric-name">Disk I/O</div>
+      <div class="metric-desc">Per-device read/write bytes/s and iops at p99 — catches storage contention under load</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">⚙️</div>
+      <div class="metric-name">Config Tracking</div>
+      <div class="metric-desc">sysctl & ethtool changes logged to ClickHouse with timestamps — Grafana annotation events</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-icon">🎮</div>
+      <div class="metric-name">GPU (NVML)</div>
+      <div class="metric-desc">SM utilisation, memory bandwidth, NVLink traffic, power draw and temperature — per-GPU at 10 ms</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 4 — CASE STUDY SETUP ══════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-title">Case Study — Network Throughput</div>
+  <div class="slide-head">nyquist applied to a 100 GbE throughput problem</div>
+  <!-- KPI strip -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;margin-bottom:.75rem">
+    <div class="stat-block">
+      <div style="font-size:2.6rem;font-weight:800;color:#38bdf8;line-height:1">48.8<span style="font-size:1.1rem;font-weight:500;margin-left:.25rem">Gbps</span></div>
+      <div class="stat-lbl" style="font-size:.8rem;margin-top:.4rem">avg throughput</div>
+      <div class="stat-sub">max 60.7 / min 41.5</div>
+    </div>
+    <div class="stat-block">
+      <div style="font-size:2.6rem;font-weight:800;color:#4ade80;line-height:1">394<span style="font-size:1.1rem;font-weight:500;margin-left:.25rem">µs</span></div>
+      <div class="stat-lbl" style="font-size:.8rem;margin-top:.4rem">avg RTT</div>
+      <div class="stat-sub">same datacenter</div>
+    </div>
+    <div class="stat-block">
+      <div style="font-size:2.6rem;font-weight:800;color:#f87171;line-height:1">8<span style="font-size:1.4rem;font-weight:600">/63</span></div>
+      <div class="stat-lbl" style="font-size:.8rem;margin-top:.4rem">RSS queues active</div>
+      <div class="stat-sub">Toeplitz hash</div>
+    </div>
+    <div class="stat-block">
+      <div style="font-size:2.6rem;font-weight:800;color:#fb923c;line-height:1">~100<span style="font-size:1.1rem;font-weight:500;margin-left:.15rem">%</span></div>
+      <div class="stat-lbl" style="font-size:.8rem;margin-top:.4rem">softirq CPU util</div>
+      <div class="stat-sub">8 cores, rest idle</div>
+    </div>
+    <div class="stat-block">
+      <div style="font-size:2.6rem;font-weight:800;color:#a78bfa;line-height:1">6427</div>
+      <div class="stat-lbl" style="font-size:.8rem;margin-top:.4rem">retransmits</div>
+      <div class="stat-sub">over 381 s</div>
+    </div>
+  </div>
+  <!-- charts area -->
+  <div style="flex:1;display:flex;flex-direction:column;gap:.75rem;min-height:0">
+    <!-- throughput timeseries -->
+    <div class="card" style="flex:2;display:flex;flex-direction:column">
+      <h4>Throughput — 381 s · 10 GbE link · xfr -P 10 --reverse</h4>
+      <div class="chart-wrap" style="flex:1;min-height:0"><canvas id="csThumb"></canvas></div>
+    </div>
+    <!-- cpu + queue -->
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;min-height:0">
+      <div class="card" style="display:flex;flex-direction:column">
+        <h4>CPU softirq % — 8 cores pinned, 184 idle</h4>
+        <div class="chart-wrap" style="flex:1;min-height:0"><canvas id="csCpuBar"></canvas></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <h4>Traffic share by RSS queue (p99)</h4>
+        <div class="chart-wrap" style="flex:1;min-height:0"><canvas id="csQueuePie"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 5 — THROUGHPUT BASELINE ════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-title">Observation 1 of 3</div>
+  <div class="slide-head">Throughput is stable but capped — traditional monitoring stops here</div>
+  <div class="slide-sub">nyquist captures every 1-second interval for the full test window; stdev 3.8 Gbps shows it's not network noise</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="col">
+      <div class="card" style="flex:2">
+        <h4>Throughput over time — 381s elapsed</h4>
+        <div class="chart-wrap"><canvas id="tputMain"></canvas></div>
+      </div>
+      <div class="card" style="flex:1">
+        <h4>RTT over time (µs)</h4>
+        <div class="chart-wrap"><canvas id="rttMain"></canvas></div>
+      </div>
+    </div>
+    <div class="col" style="justify-content:center">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+        <div class="stat-block">
+          <div class="stat-val">48.8</div>
+          <div class="stat-lbl">avg Gbps</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val">3.8</div>
+          <div class="stat-lbl">stdev Gbps</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val" style="color:#4ade80">394µs</div>
+          <div class="stat-lbl">avg RTT</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val" style="color:#4ade80">2.3MB</div>
+          <div class="stat-lbl">BDP</div>
+        </div>
+      </div>
+      <div class="hl-red" style="margin-bottom:.75rem">
+        <strong class="red">Traditional view:</strong> "48.8 Gbps." No explanation.
+        No way to know if this is expected, degraded, or at a hard limit.
+      </div>
+      <div class="hl-blue">
+        <strong class="accent">nyquist adds:</strong> CWND 4165KB vs BDP 2355KB.
+        The TCP window is <strong>177% of BDP</strong> — buffer size is NOT the bottleneck.
+        Something else is capping us.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 6 — CPU SATURATION ═════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-title">Observation 2 of 3</div>
+  <div class="slide-head">8 CPU cores are at 100%+ softirq — the real ceiling</div>
+  <div class="slide-sub">nyquist samples all 192 CPUs individually at 10 ms. The saturation is invisible at 60 s resolution.</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="card" style="flex:1">
+      <h4>Per-CPU softirq % — avg during test (only CPUs &gt;1% shown)</h4>
+      <div class="chart-wrap"><canvas id="cpuBar"></canvas></div>
+    </div>
+    <div class="card" style="flex:1">
+      <h4>Hot CPU softirq % — sustained over time</h4>
+      <div class="chart-wrap"><canvas id="cpuTs"></canvas></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem">
+    <div class="hl-red">
+      <strong class="red">cpu1, cpu3, cpu47…</strong> all pinned at 100–108% softirq.
+      A CPU cannot exceed 100% — these are fully saturated.
+    </div>
+    <div class="hl-blue">
+      <strong class="accent">184 CPUs idle</strong> while 8 do all the work.
+      The system has 192 cores but only 8 are engaged.
+    </div>
+    <div class="hl-grn">
+      <strong class="green">Why these CPUs?</strong> NIC queue N → CPU N via IRQ affinity.
+      The question becomes: why only queues 1, 3, 5, 13, 23, 35, 37, 47?
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 7 — RSS QUEUE IMBALANCE ════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-title">Observation 3 of 3</div>
+  <div class="slide-head">Only 8 of 63 RSS queues are active — Toeplitz hash collision</div>
+  <div class="slide-sub">nyquist monitors all 63 per-queue packet rates at 10 ms. The imbalance pattern is the key diagnostic clue.</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="card" style="flex:1">
+      <h4>p99 RX pps per queue (Mpps) — only active queues</h4>
+      <div class="chart-wrap"><canvas id="queueBar"></canvas></div>
+    </div>
+    <div class="card" style="flex:1">
+      <h4>Traffic share per queue — q47 + q3 carry 37%</h4>
+      <div class="chart-wrap"><canvas id="queuePie"></canvas></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem">
+    <div class="hl-red">
+      <strong class="red">Toeplitz hash</strong> with 10 streams (same src/dst IP, varying src port) produces only <strong>8 unique hash outputs</strong> → 8 queues → 8 CPUs.
+    </div>
+    <div class="hl-red">
+      <strong class="red">Imbalance within queues:</strong> q47 carries 19%, q3 carries 18%.
+      Two CPUs handling 2× their fair share while already saturated.
+    </div>
+    <div class="hl-blue">
+      <strong class="accent">55 queues completely idle.</strong> The NIC is capable of 63× the per-queue throughput.
+      The bottleneck is entirely in how flows are steered.
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 8 — WHAT IS NOT THE BOTTLENECK ════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-title">Root Cause Analysis</div>
+  <div class="slide-head">Ruling out false positives — only one true bottleneck</div>
+  <div class="slide-sub">nyquist monitors all potential bottlenecks simultaneously, eliminating guesswork</div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:.65rem">
+    <div class="bn-row">
+      <div class="bn-lbl">🔴 CPU softirq (hot cores)</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:100%;background:linear-gradient(90deg,#7f1d1d,#ef4444)">100–108% — SATURATED → this is the ceiling</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🔴 RSS queue utilisation</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:13%;background:#c2410c">8 / 63 (13%) — forces all load onto 8 CPUs</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 TCP CWND vs BDP</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:100%;background:#15803d">177% of BDP — window is ample, not limiting</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 tcp_rmem ceiling</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:31%;background:#166534">31% used (ceiling = 156 Gbps at 394µs RTT)</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 NIC ring buffer</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:2%;background:#166534">0 rx_missed, 0 rx_out_of_buffer</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 TCP retransmits</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:2%;background:#166534">6427 over 381s — negligible rate</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 NUMA locality</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:4%;background:#166534">NIC on socket 0, all active CPUs on socket 0</div></div>
+    </div>
+    <div class="bn-row">
+      <div class="bn-lbl">🟢 MTU (contributes)</div>
+      <div class="bn-bg"><div class="bn-fill" style="width:65%;background:#854d0e">1500B MTU → 3.9 Mpps — high per-packet CPU cost amplifies saturation</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 9 — PACKET RATE MATH ══════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-title">Contributing Factor</div>
+  <div class="slide-head">MTU 1500 creates 3.9 million packets/sec — 6× CPU overhead vs jumbo frames</div>
+  <div class="slide-sub">Every packet requires a separate DMA operation, IRQ (or NAPI poll budget), and TCP segment processing</div>
+  <div class="cols2" style="flex:1;min-height:0">
+    <div class="card" style="flex:1">
+      <h4>Packets/sec at 48.8 Gbps — by MTU</h4>
+      <div class="chart-wrap"><canvas id="mtuPps"></canvas></div>
+    </div>
+    <div class="card" style="flex:1">
+      <h4>Relative softirq CPU load — MTU 1500 = 1.0×</h4>
+      <div class="chart-wrap"><canvas id="mtuCpu"></canvas></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem">
+    <div class="stat-block">
+      <div class="stat-val" style="color:#f87171">3.9M</div>
+      <div class="stat-lbl">pps at MTU 1500</div>
+      <div class="stat-sub">current — CPUs at 100%</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-val" style="color:#fb923c">1.3M</div>
+      <div class="stat-lbl">pps at MTU 4500</div>
+      <div class="stat-sub">3× reduction</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-val" style="color:#4ade80">650K</div>
+      <div class="stat-lbl">pps at MTU 9000</div>
+      <div class="stat-sub">6× reduction — CPUs at ~17%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 10 — RECOMMENDATIONS ══════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="slide-title">Recommendations</div>
+  <div class="slide-head">Three changes to reach 100+ Gbps</div>
+  <div class="slide-sub">Each is independently testable. RPS and stream count can be changed with the test running.</div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:.75rem;justify-content:center">
+    <div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:.75rem;
+      font-size:.72rem;color:#475569;text-transform:uppercase;letter-spacing:.06em;padding:0 .25rem">
+      <div></div><div>Change</div><div>Mechanism</div><div>Estimated gain</div>
+    </div>
+    <div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:.75rem;
+      background:#0f1f38;border:1px solid #ef444430;border-radius:.6rem;padding:.9rem">
+      <div style="font-size:1.4rem;align-self:center">1</div>
+      <div><strong>Enable RPS</strong><br><code style="font-size:.72rem;color:#93c5fd">rps_cpus = socket-0 mask</code><br><span class="tag tag-grn" style="margin-top:.3rem">Zero downtime</span></div>
+      <div style="font-size:.82rem;color:#94a3b8">Spread softirq from 8 saturated CPUs to all 48 socket-0 CPUs in software. No hardware changes.</div>
+      <div><span style="font-size:1.5rem;font-weight:800;color:#38bdf8">2–4×</span><br><span style="font-size:.75rem;color:#475569">throughput improvement</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:.75rem;
+      background:#0f1f38;border:1px solid #ef444430;border-radius:.6rem;padding:.9rem">
+      <div style="font-size:1.4rem;align-self:center">2</div>
+      <div><strong>Jumbo frames MTU 9000</strong><br><code style="font-size:.72rem;color:#93c5fd">ip link set ens1f0np0 mtu 9000</code><br><span class="tag tag-ylw" style="margin-top:.3rem">Peer coordination needed</span></div>
+      <div style="font-size:.82rem;color:#94a3b8">6× fewer packets per second. Each CPU core handles 6× less softirq work per byte delivered.</div>
+      <div><span style="font-size:1.5rem;font-weight:800;color:#38bdf8">6×</span><br><span style="font-size:.75rem;color:#475569">pps reduction → CPU headroom</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:.75rem;
+      background:#0f1f38;border:1px solid #1e3a5f;border-radius:.6rem;padding:.9rem">
+      <div style="font-size:1.4rem;align-self:center">3</div>
+      <div><strong>More parallel streams</strong><br><code style="font-size:.72rem;color:#93c5fd">-P 40</code> instead of <code style="font-size:.72rem;color:#93c5fd">-P 10</code><br><span class="tag tag-grn" style="margin-top:.3rem">Immediate — no config</span></div>
+      <div style="font-size:.82rem;color:#94a3b8">40 unique src-port hashes spread load across more of the 63 RSS queues, engaging more CPUs.</div>
+      <div><span style="font-size:1.5rem;font-weight:800;color:#38bdf8">1.5–2×</span><br><span style="font-size:.75rem;color:#475569">immediate, no changes needed</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem">
+      <div class="hl-blue" style="font-size:.78rem">
+        <strong>Also:</strong> <code>netdev_max_backlog=250000</code> prevents burst drops when CPUs are recovering from saturation spikes.
+      </div>
+      <div class="hl-blue" style="font-size:.78rem">
+        <strong>Also:</strong> <code>tcp_congestion_control=bbr</code> — better throughput model at sub-ms RTT vs CUBIC.
+      </div>
+      <div class="hl-grn" style="font-size:.78rem">
+        <strong>Not needed:</strong> <code>tcp_rmem</code> is already sufficient.
+        At 394µs RTT, 6 MB gives a 156 Gbps ceiling — well above 100 GbE.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 11 — WHY HF SAMPLING MATTERS ══════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-title">The nyquist Advantage</div>
+  <div class="slide-head">High-frequency sampling turns hours of guessing into minutes of diagnosis</div>
+  <div class="slide-sub">This entire analysis — bottleneck identification, root cause, and ranked recommendations — came from 5 minutes of telemetry</div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:1rem;justify-content:center">
+    <table class="cmp-table">
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Traditional (60 s poll)</th>
+          <th style="color:#38bdf8">nyquist (10 ms)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>What is the throughput?</td>
+          <td>48.8 Gbps ✓</td>
+          <td style="color:#38bdf8">48.8 Gbps avg, ±3.7 stdev, 60.7 max ✓✓</td>
+        </tr>
+        <tr>
+          <td>Is TCP the bottleneck?</td>
+          <td><span class="red">Unknown — no window data</span></td>
+          <td style="color:#38bdf8">No — CWND 190% of BDP, ceiling = 156 Gbps ✓</td>
+        </tr>
+        <tr>
+          <td>Are ring buffers dropping?</td>
+          <td><span class="red">Unknown at 60 s</span></td>
+          <td style="color:#38bdf8">0 rx_missed, 0 rx_out_of_buffer ✓</td>
+        </tr>
+        <tr>
+          <td>Which CPUs are hot?</td>
+          <td><span class="red">No per-CPU visibility</span></td>
+          <td style="color:#38bdf8">cpu1, cpu3, cpu5, cpu13, cpu23, cpu35, cpu37, cpu47 at 100%+ ✓</td>
+        </tr>
+        <tr>
+          <td>How many queues are used?</td>
+          <td><span class="red">Not measurable</span></td>
+          <td style="color:#38bdf8">8 of 63 — Toeplitz hash with 10 streams ✓</td>
+        </tr>
+        <tr>
+          <td>Root cause?</td>
+          <td><span class="red">Unknown — manual investigation needed</span></td>
+          <td style="color:#38bdf8">RSS hash collision + MTU 1500 pps overhead ✓</td>
+        </tr>
+        <tr>
+          <td>Time to diagnosis</td>
+          <td><span class="red">Hours of trial and error</span></td>
+          <td style="color:#38bdf8">5 minutes of telemetry ✓</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem">
+      <div class="stat-block">
+        <div class="stat-val">6,000×</div>
+        <div class="stat-lbl">more samples</div>
+        <div class="stat-sub">vs 60s polling</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val">192</div>
+        <div class="stat-lbl">CPUs monitored</div>
+        <div class="stat-sub">individually per 10ms</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val">63</div>
+        <div class="stat-lbl">queues tracked</div>
+        <div class="stat-sub">per-queue pps + drops</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val" style="color:#4ade80">5 min</div>
+        <div class="stat-lbl">to root cause</div>
+        <div class="stat-sub">from test start</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#deck -->
+
+<!-- ── nav ── -->
+<div id="nav">
+  <button class="nav-btn" onclick="go(-1)">◀ prev</button>
+  <div id="slide-ctr"></div>
+  <button class="nav-btn" onclick="go(1)">next ▶</button>
+</div>
+
+<script>
+const D = {"xfr_t": [1.002, 2.003, 3.001, 4.001, 5.002, 6.002, 7.001, 8.002, 9.002, 10.0, 11.001, 12.002, 13.001, 14.001, 15.001, 16.002, 17.001, 18.0, 19.001, 20.001, 21.001, 22.001, 23.001, 24.001, 25.001, 26.002, 27.001, 28.001, 29.002, 30.001, 31.001, 32.003, 33.001, 34.001, 35.002, 36.002, 37.003, 38.001, 39.001, 40.002, 41.001, 42.002, 43.001, 44.001, 45.001, 46.002, 47.002, 48.002, 49.001, 50.002, 51.001, 52.001, 53.002, 54.001, 55.001, 56.001, 57.002, 58.001, 59.001, 60.001, 61.001, 62.001, 63.001, 64.002, 65.002, 66.002, 67.001, 68.002, 69.001, 70.001, 71.001, 72.001, 73.001, 74.002, 75.001, 76.001, 77.002, 78.002, 79.001, 80.001, 81.002, 82.002, 83.003, 84.002, 85.002, 86.001, 87.001, 88.001, 89.003, 90.001, 91.001, 92.0, 93.001, 94.002, 95.001, 96.001, 97.001, 98.001, 99.002, 100.001, 101.002, 102.001, 103.001, 104.003, 105.001, 106.001, 107.001, 108.001, 109.003, 110.001, 111.001, 112.001, 113.001, 114.002, 115.001, 116.001, 117.001, 118.002, 119.002, 120.0, 121.002, 122.001, 123.001, 124.003, 125.001, 126.001, 127.002, 128.001, 129.001, 130.001, 131.001, 132.001, 133.001, 134.001, 135.001, 136.001, 137.002, 138.001, 139.001, 140.002, 141.001, 142.001, 143.0, 144.001, 145.002, 146.002, 147.002, 148.001, 149.002, 150.002, 151.002, 152.001, 153.003, 154.002, 155.001, 156.001, 157.001, 158.001, 159.001, 160.002, 161.001, 162.001, 163.001, 164.001, 165.004, 166.001, 167.001, 168.001, 169.003, 170.001, 171.002, 172.002, 173.001, 174.001, 175.001, 176.001, 177.001, 178.001, 179.001, 180.0, 181.001, 182.002, 183.002, 184.001, 185.001, 186.002, 187.003, 188.002, 189.002, 190.002, 191.001, 192.001, 193.001, 194.002, 195.0, 196.001, 197.001, 198.002, 199.002, 200.002, 201.002, 202.001, 203.001, 204.001, 205.001, 206.001, 207.003, 208.0, 209.002, 210.001, 211.001, 212.002, 213.002, 214.001, 215.001, 216.001, 217.001, 218.001, 219.002, 220.001, 221.002, 222.001, 223.001, 224.002, 225.002, 226.001, 227.003, 228.001, 229.002, 230.002, 231.002, 232.002, 233.001, 234.001, 235.001, 236.001, 237.001, 238.003, 239.001, 240.002, 241.001, 242.001, 243.002, 244.002, 245.002, 246.001, 247.002, 248.001, 249.001, 250.001, 251.002, 252.001, 253.001, 254.001, 255.003, 256.001, 257.003, 258.002, 259.001, 260.001, 261.001, 262.001, 263.001, 264.001, 265.001, 266.001, 267.002, 268.002, 269.001, 270.003, 271.001, 272.001, 273.001, 274.001, 275.001, 276.001, 277.002, 278.001, 279.001, 280.001, 281.003, 282.001, 283.002, 284.001, 285.002, 286.001, 287.002, 288.002, 289.001, 290.002, 291.002, 292.001, 293.002, 294.001, 295.001, 296.002, 297.001, 298.001, 299.001, 300.002, 301.001, 302.001, 303.002, 304.001, 305.001, 306.001, 307.002, 308.001, 309.001, 310.001, 311.001, 312.001, 313.001, 314.001, 315.001, 316.001, 317.001, 318.001, 319.001, 320.001, 321.002, 322.002, 323.003, 324.001, 325.003, 326.002, 327.002, 328.001, 329.001, 330.001, 331.002, 332.002, 333.001, 334.0, 335.001, 336.001, 337.001, 338.001, 339.002, 340.002, 341.001, 342.002, 343.001, 344.001, 345.001, 346.001, 347.003, 348.003, 349.002, 350.001, 351.001, 352.002, 353.001, 354.001, 355.003, 356.001, 357.001, 358.002, 359.001, 360.002, 361.001, 362.001, 363.001, 364.001, 365.001, 366.001, 367.001, 368.001, 369.002, 370.004, 371.002, 372.002, 373.001, 374.001, 375.002, 376.001, 377.001, 378.001, 379.003, 380.001, 381.002], "xfr_gbps": [44.5, 45.96, 50.13, 47.12, 44.08, 45.22, 45.99, 47.8, 43.65, 48.26, 44.0, 45.45, 42.66, 44.3, 42.77, 45.77, 44.99, 46.9, 44.64, 42.82, 45.68, 46.36, 48.35, 43.21, 45.52, 47.09, 44.64, 43.99, 45.36, 44.08, 45.06, 44.36, 49.43, 48.34, 49.24, 50.43, 48.95, 53.5, 49.92, 45.85, 47.45, 45.57, 43.1, 47.4, 45.78, 43.59, 43.13, 45.44, 46.78, 48.52, 48.16, 48.25, 46.07, 44.9, 49.42, 49.81, 50.98, 50.32, 52.41, 52.56, 54.21, 46.42, 45.66, 51.33, 50.7, 53.64, 53.91, 47.23, 47.39, 43.84, 46.9, 52.53, 53.38, 52.33, 43.08, 43.88, 48.05, 46.51, 45.35, 42.35, 46.36, 46.38, 49.2, 50.95, 52.63, 55.81, 56.84, 55.65, 51.87, 49.96, 54.91, 50.32, 43.93, 43.89, 44.94, 44.98, 46.24, 46.06, 47.6, 47.99, 47.78, 47.03, 46.06, 45.84, 46.14, 44.48, 42.17, 42.27, 45.56, 49.45, 46.64, 48.21, 45.22, 46.64, 45.61, 46.08, 45.58, 52.16, 50.92, 52.82, 53.23, 48.83, 53.27, 52.3, 52.49, 49.22, 45.31, 45.34, 48.36, 52.55, 52.44, 50.23, 45.91, 45.7, 45.54, 53.29, 46.05, 46.44, 56.26, 47.67, 47.07, 47.88, 46.83, 46.56, 50.78, 50.64, 44.58, 46.45, 48.98, 51.94, 53.49, 52.32, 49.2, 47.96, 44.58, 44.22, 47.12, 45.48, 46.59, 49.63, 49.25, 48.64, 46.82, 45.56, 48.31, 48.79, 48.74, 47.72, 45.98, 44.85, 43.74, 48.03, 48.52, 48.76, 47.76, 47.48, 50.65, 43.84, 47.5, 45.11, 43.62, 48.9, 47.15, 46.93, 48.21, 57.05, 52.06, 51.6, 50.28, 46.91, 51.3, 45.53, 46.92, 48.46, 44.36, 44.6, 45.62, 53.71, 53.2, 50.63, 47.92, 46.07, 47.88, 46.3, 48.07, 49.78, 45.77, 47.61, 48.51, 52.14, 49.78, 52.01, 50.77, 55.13, 53.45, 53.95, 58.87, 59.75, 59.15, 60.03, 55.85, 49.18, 56.54, 55.32, 55.87, 51.35, 46.58, 53.67, 47.15, 43.74, 48.6, 46.66, 44.89, 45.22, 46.14, 46.99, 46.72, 47.99, 51.78, 54.39, 49.55, 47.46, 48.46, 48.76, 58.02, 54.29, 56.27, 46.06, 52.26, 53.05, 51.36, 43.95, 42.75, 45.35, 51.99, 51.25, 51.73, 51.35, 50.99, 48.71, 43.85, 52.83, 50.08, 51.62, 53.7, 55.29, 54.31, 52.97, 55.74, 51.62, 48.03, 45.37, 44.9, 43.74, 46.28, 46.95, 43.87, 44.96, 47.48, 47.13, 47.96, 47.02, 48.93, 49.34, 50.07, 48.89, 47.23, 50.5, 54.27, 48.6, 50.13, 46.45, 50.56, 45.52, 47.01, 55.71, 51.5, 48.56, 50.18, 45.6, 50.45, 45.74, 48.1, 44.47, 44.31, 45.56, 45.49, 48.94, 45.25, 43.2, 44.31, 46.06, 41.48, 42.37, 49.79, 49.96, 53.57, 53.88, 49.08, 47.05, 54.46, 55.64, 49.04, 49.58, 46.29, 46.86, 49.13, 51.67, 53.28, 45.77, 44.9, 45.67, 46.96, 46.64, 54.2, 53.63, 53.36, 53.52, 49.28, 47.47, 56.34, 50.84, 47.49, 52.33, 60.68, 57.3, 57.92, 51.7, 54.36, 50.02, 49.0, 47.59, 46.35, 43.81, 45.01, 53.65, 51.51, 52.16, 53.98, 50.26, 48.98, 50.75, 53.92, 46.62, 52.95, 54.93, 51.91, 44.85, 50.82, 53.07, 55.46, 56.1, 47.55, 56.8, 47.67, 47.15, 46.48, 47.44, 44.98, 42.74, 45.68], "xfr_rtt": [455, 322, 385, 451, 464, 358, 383, 446, 460, 412, 418, 358, 467, 358, 423, 367, 354, 472, 429, 434, 465, 308, 428, 432, 411, 328, 506, 416, 453, 443, 308, 366, 421, 338, 404, 382, 397, 365, 434, 386, 383, 353, 454, 466, 441, 350, 435, 430, 451, 380, 417, 404, 450, 467, 370, 408, 409, 373, 351, 383, 388, 413, 402, 365, 337, 356, 440, 377, 441, 425, 330, 325, 359, 461, 400, 443, 387, 423, 419, 437, 346, 364, 355, 406, 356, 371, 319, 376, 295, 324, 330, 417, 437, 433, 419, 466, 395, 399, 300, 320, 389, 478, 445, 408, 405, 471, 423, 450, 400, 383, 423, 351, 372, 444, 422, 421, 458, 411, 339, 424, 347, 297, 362, 343, 377, 434, 384, 450, 368, 333, 444, 418, 408, 451, 401, 352, 429, 456, 341, 338, 418, 478, 450, 415, 332, 307, 387, 364, 337, 348, 463, 419, 333, 410, 432, 471, 423, 431, 428, 377, 397, 415, 378, 438, 279, 408, 408, 344, 422, 417, 425, 378, 410, 416, 388, 436, 390, 459, 406, 445, 453, 330, 416, 450, 341, 341, 336, 351, 328, 449, 460, 413, 385, 325, 436, 440, 442, 319, 347, 373, 446, 420, 440, 437, 353, 404, 409, 358, 376, 409, 316, 369, 354, 335, 358, 391, 349, 353, 323, 352, 400, 381, 357, 316, 317, 395, 332, 412, 490, 411, 416, 432, 440, 414, 452, 366, 409, 354, 346, 330, 425, 349, 298, 350, 309, 377, 348, 425, 389, 356, 403, 501, 406, 435, 385, 336, 378, 374, 462, 458, 413, 490, 386, 366, 331, 383, 318, 324, 349, 358, 367, 437, 416, 438, 447, 371, 400, 441, 410, 442, 327, 472, 400, 382, 411, 356, 393, 320, 395, 317, 397, 383, 439, 462, 395, 328, 338, 444, 447, 426, 479, 389, 438, 411, 427, 434, 427, 372, 410, 434, 381, 479, 458, 469, 323, 378, 370, 400, 396, 365, 337, 353, 386, 430, 379, 428, 342, 287, 430, 424, 422, 286, 378, 402, 354, 368, 348, 421, 398, 340, 289, 327, 427, 369, 341, 385, 369, 359, 336, 399, 424, 391, 330, 405, 357, 384, 358, 327, 384, 421, 398, 332, 398, 423, 404, 390, 415, 379, 406, 332, 401, 420, 417, 392, 408, 476, 390, 467, 329, 427, 385], "trad_t": [1, 61, 121, 181, 241, 301, 361], "trad_gbps": [46.6, 48.2, 48.31, 50.08, 49.47, 49.48, 49.85], "cpu_labels": ["cpu1", "cpu3", "cpu5", "cpu13", "cpu23", "cpu35", "cpu37", "cpu47"], "cpu_values": [105.0, 107.4, 100.4, 101.4, 104.0, 101.2, 100.4, 105.0], "q_labels": ["q1", "q3", "q5", "q13", "q23", "q35", "q37", "q47"], "q_mpps": [1.081, 2.073, 1.049, 1.008, 1.065, 1.036, 1.13, 1.991], "q_share": [10.4, 19.9, 10.1, 9.7, 10.2, 9.9, 10.8, 19.1], "cpu_ts": {"cpu1": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 95.0, 104.0, 104.0, 105.0, 105.0, 103.0, 106.0, 106.0, 102.0, 104.0, 108.0, 108.0, 105.0, 103.0, 103.0, 106.0], "color": "#ef4444"}, "cpu3": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 98.0, 105.0, 108.0, 108.0, 107.0, 108.0, 108.0, 107.0, 105.0, 108.0, 109.0, 108.0, 107.0, 107.0, 107.0, 108.0], "color": "#f97316"}, "cpu5": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 0.0, 91.0, 100.0, 101.0, 101.0, 102.0, 101.0, 100.0, 102.0, 101.0, 101.0, 99.0, 100.0, 102.0, 101.0, 100.0], "color": "#eab308"}, "cpu13": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 0.0, 98.0, 104.0, 103.0, 101.0, 102.0, 102.0, 101.0, 101.0, 100.0, 105.0, 106.0, 100.0, 101.0, 101.0, 99.0], "color": "#22c55e"}, "cpu23": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 0.0, 98.0, 101.0, 102.0, 101.0, 102.0, 102.0, 101.0, 102.0, 102.0, 102.0, 103.0, 104.0, 105.0, 105.0, 103.0], "color": "#06b6d4"}, "cpu35": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 0.0, 90.0, 99.0, 102.0, 101.0, 102.0, 102.0, 101.0, 101.0, 101.0, 102.0, 102.0, 100.0, 101.0, 102.0, 101.0], "color": "#6366f1"}, "cpu37": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 0.0, 101.0, 101.0, 100.0, 101.0, 101.0, 101.0, 101.0, 100.0, 101.0, 102.0, 100.0, 99.0, 102.0, 101.0, 100.0], "color": "#a855f7"}, "cpu47": {"x": [0, 26, 47, 69, 92, 114, 137, 159, 180, 202, 224, 246, 269, 292, 315, 337, 357, 379], "y": [0.0, 0.0, 97.0, 105.0, 107.0, 107.0, 106.0, 106.0, 105.0, 107.0, 107.0, 106.0, 106.0, 105.0, 106.0, 106.0, 104.0, 104.0], "color": "#ec4899"}}, "mtu_pps": [4.07, 1.36, 0.68], "mtu_cpu": [1.0, 0.33, 0.17], "stats": {"tput_avg": 48.8, "tput_max": 60.7, "tput_min": 41.5, "tput_std": 3.8, "rtt_avg": 394, "retx_tot": 6427, "dur_s": 381, "cwnd_avg": 4165, "bdp_mb": 2.3, "cwnd_fill": 177}};
+const SLIDES = document.querySelectorAll('.slide');
+const N = SLIDES.length;
+let cur = 0, charts = {};
+
+function go(delta){
+  const prev = cur;
+  cur = Math.max(0, Math.min(N-1, cur+delta));
+  if(cur === prev) return;
+  SLIDES[prev].classList.remove('active');
+  SLIDES[prev].classList.toggle('prev', delta>0);
+  SLIDES[cur].classList.remove('prev');
+  SLIDES[cur].classList.add('active');
+  requestAnimationFrame(()=>{ SLIDES[prev].classList.remove('prev'); });
+  update();
+  renderCharts(cur);
+}
+
+function update(){
+  document.getElementById('slide-ctr').textContent = `${cur+1} / ${N}`;
+  document.getElementById('progress-bar').style.width = `${(cur/(N-1))*100}%`;
+  const titles = ['Introduction','Sampling Resolution','The Nyquist Theorem','Design Principles',
+    'Architecture','Sampling Pipeline','Telemetry Coverage','Case Study Setup','Throughput Baseline',
+    'CPU Saturation','RSS Queue Imbalance','Bottleneck Analysis',
+    'Packet Rate & MTU','Recommendations','Why High-Frequency Matters'];
+  document.getElementById('slide-label').textContent = titles[cur]||'';
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='ArrowDown') go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') go(-1);
+});
+
+// swipe
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX);
+document.addEventListener('touchend',e=>{ const d=tx-e.changedTouches[0].clientX; if(Math.abs(d)>50) go(d>0?1:-1); });
+
+const GC = '#rgba(148,163,184,0.07)';
+const TC = '#475569';
+
+function mkChart(id,cfg){ if(charts[id]) charts[id].destroy(); const c=document.getElementById(id); if(!c)return; charts[id]=new Chart(c,cfg); }
+
+function renderCharts(idx){
+  const id = SLIDES[idx] ? SLIDES[idx].id : '';
+  const gridC='rgba(148,163,184,0.07)', tickC='#475569';
+  const baseScales={x:{grid:{color:gridC},ticks:{color:tickC,maxTicksLimit:8}},
+                    y:{grid:{color:gridC},ticks:{color:tickC,maxTicksLimit:6}}};
+  const baseOpts={responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{labels:{color:'#94a3b8',boxWidth:10,font:{size:11}}}}};
+
+  if(id==='s1'){ // sampling gap
+    const wrap=(data,step)=>{const t=[],v=[];for(let i=0;i<data.length;i+=step){const c=data.slice(i,i+step);t.push(D.xfr_t[i]);v.push(+(c.reduce((a,b)=>a+b,0)/c.length).toFixed(2));}return{t,v};};
+    const w=wrap(D.xfr_gbps,60);
+    mkChart('tradChart',{type:'scatter',data:{datasets:[{label:'60s avg',data:w.t.map((x,i)=>({x,y:w.v[i]})),
+      borderColor:'#f97316',backgroundColor:'#f97316',pointRadius:5,showLine:true,stepped:true}]},
+      options:{...baseOpts,scales:{x:{...baseScales.x,title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:30,max:70,title:{display:true,text:'Gbps',color:tickC}}}}});
+    mkChart('hiresChart',{type:'line',data:{datasets:[{label:'10ms samples',data:D.xfr_t.map((x,i)=>({x,y:D.xfr_gbps[i]})),
+      borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.06)',borderWidth:1.5,pointRadius:0,fill:true}]},
+      options:{...baseOpts,scales:{x:{...baseScales.x,type:'linear',title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:30,max:70,title:{display:true,text:'Gbps',color:tickC}}}}});
+  }
+  if(id==='s_nq'){ // nyquist theorem chart
+    const pts=500;
+    const tArr=Array.from({length:pts},(_,i)=>+(i*0.01).toFixed(2));
+    const sig=tArr.map(x=>{
+      const b1=90*Math.exp(-50*Math.pow(x-0.8,2));
+      const b2=70*Math.exp(-50*Math.pow(x-2.1,2));
+      const b3=85*Math.exp(-50*Math.pow(x-3.4,2));
+      const b4=60*Math.exp(-50*Math.pow(x-4.3,2));
+      return +(8+b1+b2+b3+b4).toFixed(1);
+    });
+    // Sparse samples land exactly between all four burst peaks
+    const sparseI=[0,125,250,375,499];
+    const sparseData=sparseI.map(i=>({x:tArr[i],y:sig[i]}));
+    mkChart('nqChart',{type:'line',data:{datasets:[
+      {label:'True signal — 10 ms resolution',
+        data:tArr.map((x,i)=>({x,y:sig[i]})),
+        borderColor:'rgba(56,189,248,.8)',backgroundColor:'rgba(56,189,248,.07)',
+        borderWidth:1.5,pointRadius:0,fill:true,order:2},
+      {label:'60 s poll — 5 samples (all miss the bursts)',
+        data:sparseData,
+        borderColor:'#f97316',backgroundColor:'#f97316',
+        pointRadius:8,pointHoverRadius:10,showLine:true,
+        borderDash:[7,5],borderWidth:2,tension:0,order:1}
+    ]},
+    options:{...baseOpts,
+      scales:{
+        x:{...baseScales.x,type:'linear',
+          title:{display:true,text:'Time (s)',color:tickC},min:0,max:5},
+        y:{...baseScales.y,min:0,max:110,
+          title:{display:true,text:'Magnitude (a.u.)',color:tickC}}
+      }}});
+  }
+  if(id==='s4'){ // case study — 3 real-data charts
+    // throughput time series
+    mkChart('csThumb',{type:'line',data:{datasets:[
+      {label:'Throughput (Gbps)',data:D.xfr_t.map((x,i)=>({x,y:D.xfr_gbps[i]})),
+        borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.08)',borderWidth:1.5,pointRadius:0,fill:true},
+      {label:'Avg 48.8 Gbps',data:D.xfr_t.map(x=>({x,y:48.8})),
+        borderColor:'#f97316',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},
+      options:{...baseOpts,scales:{
+        x:{...baseScales.x,type:'linear',title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:30,max:70,title:{display:true,text:'Gbps',color:tickC}}}}});
+    // cpu softirq bar
+    mkChart('csCpuBar',{type:'bar',data:{labels:D.cpu_labels,
+      datasets:[{label:'Softirq %',data:D.cpu_values,
+        backgroundColor:D.cpu_values.map(v=>v>=100?'rgba(239,68,68,.6)':'rgba(249,115,22,.5)'),
+        borderColor:D.cpu_values.map(v=>v>=100?'#ef4444':'#f97316'),borderWidth:1}]},
+      options:{...baseOpts,
+        scales:{x:{...baseScales.x},y:{...baseScales.y,min:0,max:130,
+          title:{display:true,text:'Softirq %',color:tickC}}},
+        plugins:{...baseOpts.plugins,annotation:{annotations:{
+          l100:{type:'line',yMin:100,yMax:100,borderColor:'rgba(239,68,68,.5)',borderDash:[4,3]}}}}}});
+    // queue share donut
+    const PIE_C=['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#6366f1','#a855f7','#ec4899'];
+    mkChart('csQueuePie',{type:'doughnut',data:{labels:D.q_labels,datasets:[{data:D.q_share,
+      backgroundColor:PIE_C,borderColor:'#060d1a',borderWidth:2}]},
+      options:{...baseOpts,plugins:{
+        legend:{position:'right',labels:{color:'#94a3b8',boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}});
+  }
+  if(id==='s5'){ // throughput + rtt
+    mkChart('tputMain',{type:'line',data:{datasets:[
+      {label:'Throughput (Gbps)',data:D.xfr_t.map((x,i)=>({x,y:D.xfr_gbps[i]})),
+        borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.06)',borderWidth:1.5,pointRadius:0,fill:true},
+      {label:`Avg (48.8 Gbps)`,data:D.xfr_t.map(x=>({x,y:48.8})),
+        borderColor:'#f97316',borderWidth:1.5,borderDash:[6,3],pointRadius:0}]},
+      options:{...baseOpts,scales:{x:{...baseScales.x,type:'linear',title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:0,title:{display:true,text:'Gbps',color:tickC}}}}});
+    mkChart('rttMain',{type:'line',data:{datasets:[{label:'RTT (µs)',data:D.xfr_t.map((x,i)=>({x,y:D.xfr_rtt[i]})),
+      borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.06)',borderWidth:1.5,pointRadius:0,fill:true}]},
+      options:{...baseOpts,scales:{x:{...baseScales.x,type:'linear',title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:0,title:{display:true,text:'µs',color:tickC}}}}});
+  }
+  if(id==='s6'){ // cpu charts
+    const COLORS=['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#6366f1','#a855f7','#ec4899'];
+    mkChart('cpuBar',{type:'bar',data:{labels:D.cpu_labels,
+      datasets:[{label:'Softirq % avg',data:D.cpu_values,
+        backgroundColor:D.cpu_values.map(v=>v>=100?'rgba(239,68,68,.5)':v>70?'rgba(249,115,22,.5)':'rgba(34,197,94,.4)'),
+        borderColor:D.cpu_values.map(v=>v>=100?'#ef4444':v>70?'#f97316':'#22c55e'),borderWidth:1}]},
+      options:{...baseOpts,plugins:{...baseOpts.plugins,annotation:{annotations:{
+        l100:{type:'line',yMin:100,yMax:100,borderColor:'rgba(239,68,68,.6)',borderDash:[4,3]}}}},
+        scales:{x:baseScales.x,y:{...baseScales.y,min:0,max:130,
+          title:{display:true,text:'Softirq %',color:tickC}}}}});
+    const cpuDs=Object.entries(D.cpu_ts).map(([cpu,v],i)=>({
+      label:cpu,data:v.x.map((x,j)=>({x,y:v.y[j]})),
+      borderColor:COLORS[i],borderWidth:1.5,pointRadius:0,tension:.3}));
+    mkChart('cpuTs',{type:'line',data:{datasets:cpuDs},
+      options:{...baseOpts,scales:{x:{...baseScales.x,type:'linear',title:{display:true,text:'Elapsed (s)',color:tickC}},
+        y:{...baseScales.y,min:0,max:130,title:{display:true,text:'Softirq %',color:tickC}}}}});
+  }
+  if(id==='s7'){ // queue charts
+    const PIE_C=['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#6366f1','#a855f7','#ec4899'];
+    mkChart('queueBar',{type:'bar',data:{labels:D.q_labels,
+      datasets:[{label:'p99 Mpps',data:D.q_mpps,
+        backgroundColor:'rgba(99,102,241,.5)',borderColor:'#6366f1',borderWidth:1}]},
+      options:{...baseOpts,scales:{x:baseScales.x,
+        y:{...baseScales.y,min:0,title:{display:true,text:'Mpps (p99)',color:tickC}}}}});
+    mkChart('queuePie',{type:'doughnut',data:{labels:D.q_labels,datasets:[{data:D.q_share,
+      backgroundColor:PIE_C,borderColor:'#060d1a',borderWidth:2}]},
+      options:{...baseOpts,plugins:{legend:{position:'right',labels:{color:'#94a3b8',boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}});
+  }
+  if(id==='s9'){ // mtu charts
+    const MTU_COLORS=['rgba(239,68,68,.5)','rgba(249,115,22,.5)','rgba(34,197,94,.5)'];
+    const MTU_BORDER=['#ef4444','#f97316','#22c55e'];
+    mkChart('mtuPps',{type:'bar',data:{labels:['MTU 1500\n(current)','MTU 4500','MTU 9000'],
+      datasets:[{label:'Mpps at 48.8 Gbps',data:D.mtu_pps,
+        backgroundColor:MTU_COLORS,borderColor:MTU_BORDER,borderWidth:1}]},
+      options:{...baseOpts,scales:{x:baseScales.x,
+        y:{...baseScales.y,min:0,title:{display:true,text:'Mpps',color:tickC}}}}});
+    mkChart('mtuCpu',{type:'bar',data:{labels:['MTU 1500\n(current)','MTU 4500','MTU 9000'],
+      datasets:[{label:'Relative CPU load',data:D.mtu_cpu,
+        backgroundColor:MTU_COLORS,borderColor:MTU_BORDER,borderWidth:1}]},
+      options:{...baseOpts,scales:{x:baseScales.x,
+        y:{...baseScales.y,min:0,max:1.2,title:{display:true,text:'Relative load (1.0 = baseline)',color:tickC}}}}});
+  }
+}
+
+update();
+renderCharts(0);
+</script>
+</body>
+</html>

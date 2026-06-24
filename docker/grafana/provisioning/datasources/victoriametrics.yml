@@ -4,6 +4,7 @@ datasources:
   - name: VictoriaMetrics
     type: prometheus
     access: proxy
+    uid: nyquist-victoriametrics
     url: http://victoriametrics:8428
     isDefault: true
     editable: true

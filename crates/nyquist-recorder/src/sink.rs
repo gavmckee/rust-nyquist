@@ -68,7 +68,7 @@ mod tests {
                     unit: Unit::Count,
                     labels: Labels::new().insert("cpu", "0"),
                     raw: 42,
-                    percentiles: vec![(50.0, 10), (90.0, 20), (99.0, 30), (99.9, 35)],
+                    buckets: vec![(10, 5), (20, 3), (30, 1), (35, 1)],
                 },
                 MetricSnapshot {
                     name: "mem/used".to_string(),
@@ -76,7 +76,7 @@ mod tests {
                     unit: Unit::Bytes,
                     labels: Labels::new(),
                     raw: 1024,
-                    percentiles: vec![(50.0, 900), (90.0, 1000), (99.0, 1020), (99.9, 1024)],
+                    buckets: vec![(900, 5), (1000, 3), (1020, 1), (1024, 1)],
                 },
             ],
         }
@@ -111,5 +111,11 @@ mod tests {
         assert!(names_set.contains("cpu/usage/user"));
         assert!(names_set.contains("mem/used"));
         assert_eq!(ts_col.value(0), 1_000_000, "ts_unix_ms round-trips");
+        // buckets_json is column 6 — verify raw H2 buckets are preserved
+        let bj_col = batch.column(6).as_any().downcast_ref::<StringArray>().unwrap();
+        let bj_by_name: std::collections::HashMap<&str, &str> =
+            (0..names.len()).map(|i| (names.value(i), bj_col.value(i))).collect();
+        assert_eq!(bj_by_name["cpu/usage/user"], "[[10,5],[20,3],[30,1],[35,1]]");
+        assert_eq!(bj_by_name["mem/used"], "[[900,5],[1000,3],[1020,1],[1024,1]]");
     }
 }

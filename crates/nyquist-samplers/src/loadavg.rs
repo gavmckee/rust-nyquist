@@ -55,3 +55,9 @@ mod tests {
         assert_eq!(reg.raw(ids[2]), 120);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "loadavg",
+    init: |reg, iv| Box::new(LoadAvgSampler::new(reg, iv)),
+};

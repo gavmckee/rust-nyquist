@@ -62,3 +62,9 @@ mod tests {
         assert_eq!(reg.raw(net_rx_id), 15_000_000);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "softirqs",
+    init: |reg, iv| Box::new(SoftirqSampler::new(reg, iv)),
+};

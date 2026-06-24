@@ -1,0 +1,45 @@
+[general]
+listen = "0.0.0.0:9100"
+default_interval = "10ms"
+window = "60s"
+percentiles = [50.0, 90.0, 99.0, 99.9]
+
+[victoria_metrics]
+enabled = true
+url = "http://localhost:8428"
+push_interval = "10s"
+
+[clickhouse]
+enabled = true
+url = "http://localhost:18123"
+database = "nyquist_live"
+username = "default"
+password = "nyquist"
+insert_interval = "10s"
+
+[perf]
+enabled = false
+
+[recorder]
+enabled = false
+
+[samplers.cpu]
+enabled = true
+
+[samplers.memory]
+enabled = true
+
+[samplers.network]
+enabled = true
+
+[samplers.disk]
+enabled = true
+
+[samplers.loadavg]
+enabled = true
+
+[samplers.psi]
+enabled = true
+
+[samplers.sockstat]
+enabled = true

@@ -5,6 +5,7 @@
 /// needed for percentile queries, unlike the Prometheus/PromQL model.
 
 use nyquist_core::snapshot::MetricSnapshot;
+use nyquist_core::percentiles::percentiles_from_buckets;
 use crate::grouping::metric_name;
 
 pub struct NarrowRow {
@@ -21,15 +22,23 @@ pub struct NarrowRow {
 
 impl NarrowRow {
     pub fn from_snapshot(ts_ms: i64, m: &MetricSnapshot) -> Self {
+        // The ClickHouse schema has fixed percentile columns, so the percentile
+        // set here is fixed; values are computed consumer-side from the bucket
+        // array (design §3.4).
+        let p = percentiles_from_buckets(&m.buckets, &[50.0, 90.0, 99.0, 99.9]);
+        let get = |target: f64| p.iter()
+            .find(|(pp, _)| (*pp - target).abs() < 0.001)
+            .map(|(_, v)| *v)
+            .unwrap_or(0);
         NarrowRow {
             ts_ms,
             name: metric_name(&m.name),
             tags: map_literal(&m.labels),
             raw:  m.raw,
-            p50:  pct(&m.percentiles, 50.0),
-            p90:  pct(&m.percentiles, 90.0),
-            p99:  pct(&m.percentiles, 99.0),
-            p999: pct(&m.percentiles, 99.9),
+            p50:  get(50.0),
+            p90:  get(90.0),
+            p99:  get(99.0),
+            p999: get(99.9),
         }
     }
 
@@ -53,13 +62,6 @@ impl NarrowRow {
     }
 }
 
-fn pct(percentiles: &[(f64, u64)], target: f64) -> u64 {
-    percentiles.iter()
-        .find(|(p, _)| (*p - target).abs() < 0.001)
-        .map(|(_, v)| *v)
-        .unwrap_or(0)
-}
-
 fn map_literal(labels: &nyquist_core::model::Labels) -> String {
     let pairs: Vec<String> = labels
         .iter()
@@ -77,24 +79,27 @@ mod tests {
     use super::*;
     use nyquist_core::model::{Kind, Labels, Unit};
 
-    fn make_snap(name: &str, labels: Labels, raw: u64, p50: u64, p99: u64) -> MetricSnapshot {
+    fn make_snap(name: &str, labels: Labels, raw: u64, buckets: Vec<(u64, u64)>) -> MetricSnapshot {
         MetricSnapshot {
             name: name.to_string(),
             kind: Kind::Counter,
             unit: Unit::Count,
             labels,
             raw,
-            percentiles: vec![(50.0, p50), (90.0, p50 + 5), (99.0, p99), (99.9, p99 + 1)],
+            buckets,
         }
     }
 
     #[test]
     fn basic_row_fields() {
-        let m = make_snap("cpu/usage/user", Labels::new(), 42, 10, 30);
+        // total 1000; ranks land so p50->10, p90->15, p99->30, p99.9->31.
+        let buckets = vec![(10, 600), (15, 300), (30, 98), (31, 2)];
+        let m = make_snap("cpu/usage/user", Labels::new(), 42, buckets);
         let row = NarrowRow::from_snapshot(1_000, &m);
         assert_eq!(row.name, "cpu_usage_user");
         assert_eq!(row.raw, 42);
         assert_eq!(row.p50, 10);
+        assert_eq!(row.p90, 15);
         assert_eq!(row.p99, 30);
         assert_eq!(row.p999, 31);
         assert_eq!(row.tags, "{}");
@@ -103,7 +108,7 @@ mod tests {
     #[test]
     fn labels_become_map_literal() {
         let labels = Labels::new().insert("iface", "ens1f1np1").insert("queue", "48");
-        let m = make_snap("nic/queue/rx_packets", labels, 0, 0, 0);
+        let m = make_snap("nic/queue/rx_packets", labels, 0, vec![]);
         let row = NarrowRow::from_snapshot(0, &m);
         // BTreeMap iterates in key order
         assert_eq!(row.tags, "{'iface': 'ens1f1np1', 'queue': '48'}");
@@ -111,7 +116,7 @@ mod tests {
 
     #[test]
     fn values_sql_is_well_formed() {
-        let m = make_snap("net/rx", Labels::new().insert("iface", "eth0"), 5, 1, 9);
+        let m = make_snap("net/rx", Labels::new().insert("iface", "eth0"), 5, vec![(9, 10)]);
         let row = NarrowRow::from_snapshot(1_700_000_000_000, &m);
         let mut buf = String::new();
         row.append_to(&mut buf);
@@ -123,7 +128,7 @@ mod tests {
     #[test]
     fn apostrophe_in_label_is_escaped() {
         let labels = Labels::new().insert("desc", "it's a test");
-        let m = make_snap("x", labels, 0, 0, 0);
+        let m = make_snap("x", labels, 0, vec![]);
         let row = NarrowRow::from_snapshot(0, &m);
         assert!(row.tags.contains("\\'"), "apostrophe must be escaped: {}", row.tags);
     }

@@ -86,3 +86,9 @@ mod tests {
         assert_eq!(reg.metric_ids().len(), 6);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "psi",
+    init: |reg, iv| Box::new(PsiSampler::new(reg, iv)),
+};

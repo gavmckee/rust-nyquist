@@ -11,8 +11,26 @@ services:
       - -storageDataPath=/storage
     restart: unless-stopped
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: nyquist-ch
+    ports:
+      - "18123:8123"   # HTTP interface — nyquist pushes from host to localhost:18123
+      - "9000:9000"    # Native TCP — Grafana connects via clickhouse:9000 internally
+    environment:
+      CLICKHOUSE_PASSWORD: nyquist
+    volumes:
+      - ch-data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+
   grafana:
-    image: grafana/grafana:latest
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
     container_name: nyquist-grafana
     ports:
       - "3000:3000"
@@ -22,6 +40,7 @@ services:
       # Anonymous admin access — local dev only, do not expose port 3000 publicly.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_PATHS_PLUGINS: /grafana-plugins
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -29,27 +48,8 @@ services:
       - victoriametrics
     restart: unless-stopped
 
-  nyquist:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-    container_name: nyquist
-    # Share the host PID namespace so /proc reflects host-level metrics.
-    pid: "host"
-    # privileged grants CAP_BPF + CAP_PERFMON + CAP_NET_ADMIN for eBPF tracepoints
-    # and perf counters. Scope down to specific cap_add + security_opt in production.
-    privileged: true
-    ports:
-      - "9100:9100"
-    volumes:
-      - ./nyquist.toml:/etc/nyquist/config.toml:ro
-      # eBPF tracepoint format files live under debugfs
-      - /sys/kernel/debug:/sys/kernel/debug:ro
-    command: ["--config", "/etc/nyquist/config.toml"]
-    depends_on:
-      - victoriametrics
-    restart: unless-stopped
 
 volumes:
   vm-data:
   grafana-data:
+  ch-data:

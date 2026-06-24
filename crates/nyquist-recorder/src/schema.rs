@@ -7,16 +7,13 @@ use nyquist_core::snapshot::MetricSnapshot;
 
 pub fn nyquist_schema() -> Arc<Schema> {
     Arc::new(Schema::new(vec![
-        Field::new("ts_unix_ms",  DataType::Int64,  false),
-        Field::new("name",        DataType::Utf8,   false),
-        Field::new("labels_json", DataType::Utf8,   false),
-        Field::new("kind",        DataType::Utf8,   false),
-        Field::new("unit",        DataType::Utf8,   false),
-        Field::new("raw",         DataType::UInt64, false),
-        Field::new("p50",         DataType::UInt64, false),
-        Field::new("p90",         DataType::UInt64, false),
-        Field::new("p99",         DataType::UInt64, false),
-        Field::new("p99_9",       DataType::UInt64, false),
+        Field::new("ts_unix_ms",   DataType::Int64,  false),
+        Field::new("name",         DataType::Utf8,   false),
+        Field::new("labels_json",  DataType::Utf8,   false),
+        Field::new("kind",         DataType::Utf8,   false),
+        Field::new("unit",         DataType::Utf8,   false),
+        Field::new("raw",          DataType::UInt64, false),
+        Field::new("buckets_json", DataType::Utf8,   false),
     ]))
 }
 
@@ -52,39 +49,40 @@ fn unit_str(u: Unit) -> &'static str {
     }
 }
 
-fn find_pct(percentiles: &[(f64, u64)], target: f64) -> u64 {
-    percentiles.iter()
-        .find(|(p, _)| (*p - target).abs() < 0.001)
-        .map(|(_, v)| *v)
-        .unwrap_or(0)
+fn buckets_to_json(buckets: &[(u64, u64)]) -> String {
+    let mut s = String::from("[");
+    for (i, (v, c)) in buckets.iter().enumerate() {
+        if i > 0 { s.push(','); }
+        s.push('[');
+        s.push_str(&v.to_string());
+        s.push(',');
+        s.push_str(&c.to_string());
+        s.push(']');
+    }
+    s.push(']');
+    s
 }
 
 pub struct RowAccumulator {
-    ts_unix_ms:  Vec<i64>,
-    name:        Vec<String>,
-    labels_json: Vec<String>,
-    kind:        Vec<String>,
-    unit:        Vec<String>,
-    raw:         Vec<u64>,
-    p50:         Vec<u64>,
-    p90:         Vec<u64>,
-    p99:         Vec<u64>,
-    p99_9:       Vec<u64>,
+    ts_unix_ms:   Vec<i64>,
+    name:         Vec<String>,
+    labels_json:  Vec<String>,
+    kind:         Vec<String>,
+    unit:         Vec<String>,
+    raw:          Vec<u64>,
+    buckets_json: Vec<String>,
 }
 
 impl RowAccumulator {
     pub fn new() -> Self {
         RowAccumulator {
-            ts_unix_ms:  Vec::new(),
-            name:        Vec::new(),
-            labels_json: Vec::new(),
-            kind:        Vec::new(),
-            unit:        Vec::new(),
-            raw:         Vec::new(),
-            p50:         Vec::new(),
-            p90:         Vec::new(),
-            p99:         Vec::new(),
-            p99_9:       Vec::new(),
+            ts_unix_ms:   Vec::new(),
+            name:         Vec::new(),
+            labels_json:  Vec::new(),
+            kind:         Vec::new(),
+            unit:         Vec::new(),
+            raw:          Vec::new(),
+            buckets_json: Vec::new(),
         }
     }
 
@@ -95,10 +93,7 @@ impl RowAccumulator {
         self.kind.push(kind_str(m.kind).to_string());
         self.unit.push(unit_str(m.unit).to_string());
         self.raw.push(m.raw);
-        self.p50.push(find_pct(&m.percentiles, 50.0));
-        self.p90.push(find_pct(&m.percentiles, 90.0));
-        self.p99.push(find_pct(&m.percentiles, 99.0));
-        self.p99_9.push(find_pct(&m.percentiles, 99.9));
+        self.buckets_json.push(buckets_to_json(&m.buckets));
     }
 
     pub fn len(&self) -> usize { self.ts_unix_ms.len() }
@@ -113,10 +108,7 @@ impl RowAccumulator {
             Arc::new(StringArray::from(std::mem::take(&mut self.kind))),
             Arc::new(StringArray::from(std::mem::take(&mut self.unit))),
             Arc::new(UInt64Array::from(std::mem::take(&mut self.raw))),
-            Arc::new(UInt64Array::from(std::mem::take(&mut self.p50))),
-            Arc::new(UInt64Array::from(std::mem::take(&mut self.p90))),
-            Arc::new(UInt64Array::from(std::mem::take(&mut self.p99))),
-            Arc::new(UInt64Array::from(std::mem::take(&mut self.p99_9))),
+            Arc::new(StringArray::from(std::mem::take(&mut self.buckets_json))),
         ]).expect("schema matches column types")
     }
 }
@@ -127,14 +119,14 @@ mod tests {
     use nyquist_core::model::{Kind, Labels, Unit};
     use nyquist_core::snapshot::MetricSnapshot;
 
-    fn make_metric(name: &str, raw: u64, p50: u64, p90: u64, p99: u64, p99_9: u64) -> MetricSnapshot {
+    fn make_metric(name: &str, raw: u64, buckets: Vec<(u64, u64)>) -> MetricSnapshot {
         MetricSnapshot {
             name: name.to_string(),
             kind: Kind::Counter,
             unit: Unit::Bytes,
             labels: Labels::new(),
             raw,
-            percentiles: vec![(50.0, p50), (90.0, p90), (99.0, p99), (99.9, p99_9)],
+            buckets,
         }
     }
 
@@ -152,45 +144,52 @@ mod tests {
     }
 
     #[test]
+    fn buckets_to_json_roundtrip() {
+        assert_eq!(buckets_to_json(&[(10, 5), (30, 2)]), "[[10,5],[30,2]]");
+        assert_eq!(buckets_to_json(&[]), "[]");
+    }
+
+    #[test]
     fn accumulator_push_and_drain() {
         let mut acc = RowAccumulator::new();
         assert!(acc.is_empty());
-        let m = make_metric("cpu/usage/user", 42, 10, 20, 30, 35);
+        let m = make_metric("cpu/usage/user", 42, vec![(10, 5), (30, 5)]);
         acc.push(1_000_000, &m);
         assert_eq!(acc.len(), 1);
         let batch = acc.drain();
         assert_eq!(batch.num_rows(), 1);
+        assert_eq!(batch.num_columns(), 7);
         assert!(acc.is_empty());
-        use arrow_array::array::Int64Array;
         let ts_col = batch.column(0).as_any().downcast_ref::<Int64Array>().unwrap();
         assert_eq!(ts_col.value(0), 1_000_000);
+        // buckets_json is column 6
+        let bj_col = batch.column(6).as_any().downcast_ref::<StringArray>().unwrap();
+        assert_eq!(bj_col.value(0), "[[10,5],[30,5]]");
     }
 
     #[test]
     fn accumulator_drain_multiple_rows() {
         let mut acc = RowAccumulator::new();
-        acc.push(1000, &make_metric("m1", 1, 1, 1, 1, 1));
-        acc.push(2000, &make_metric("m2", 2, 2, 2, 2, 2));
+        acc.push(1000, &make_metric("m1", 1, vec![(1, 1)]));
+        acc.push(2000, &make_metric("m2", 2, vec![(2, 1)]));
         let batch = acc.drain();
         assert_eq!(batch.num_rows(), 2);
     }
 
     #[test]
-    fn missing_percentile_defaults_to_zero() {
+    fn empty_buckets_stored_as_empty_array() {
         let m = MetricSnapshot {
             name: "g".to_string(),
             kind: Kind::Gauge,
             unit: Unit::None,
             labels: Labels::new(),
             raw: 7,
-            percentiles: vec![(50.0, 7)],
+            buckets: vec![],
         };
         let mut acc = RowAccumulator::new();
         acc.push(0, &m);
         let batch = acc.drain();
-        use arrow_array::array::UInt64Array;
-        // p99 is column index 8
-        let p99_col = batch.column(8).as_any().downcast_ref::<UInt64Array>().unwrap();
-        assert_eq!(p99_col.value(0), 0);
+        let bj_col = batch.column(6).as_any().downcast_ref::<StringArray>().unwrap();
+        assert_eq!(bj_col.value(0), "[]");
     }
 }

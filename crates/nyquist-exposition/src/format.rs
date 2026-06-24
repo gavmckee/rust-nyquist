@@ -1,5 +1,6 @@
 use nyquist_core::model::{Kind, Labels};
 use nyquist_core::snapshot::RegistrySnapshot;
+use nyquist_core::percentiles::percentiles_from_buckets;
 
 fn sanitize(name: &str) -> String {
     name.chars().map(|c| if c == '/' || c == '-' { '_' } else { c }).collect()
@@ -15,7 +16,7 @@ fn label_str(labels: &Labels, extra: Option<(&str, &str)>) -> String {
     if parts.is_empty() { String::new() } else { format!("{{{}}}", parts.join(",")) }
 }
 
-pub fn to_prometheus(snap: &RegistrySnapshot) -> String {
+pub fn to_prometheus(snap: &RegistrySnapshot, percentiles: &[f64]) -> String {
     let mut out = String::new();
     for m in &snap.metrics {
         let base = sanitize(&m.name);
@@ -23,10 +24,10 @@ pub fn to_prometheus(snap: &RegistrySnapshot) -> String {
         out.push_str(&format!("# TYPE {base} {kind}\n"));
         out.push_str(&format!("{base}{} {}\n", label_str(&m.labels, None), m.raw));
         let suffix = match m.kind { Kind::Gauge => "value", _ => "rate" };
-        for (p, v) in &m.percentiles {
+        for (p, v) in percentiles_from_buckets(&m.buckets, percentiles) {
             out.push_str(&format!(
                 "{base}_{suffix}{} {}\n",
-                label_str(&m.labels, Some(("percentile", &fmt_pct(*p)))),
+                label_str(&m.labels, Some(("percentile", &fmt_pct(p)))),
                 v
             ));
         }
@@ -34,10 +35,11 @@ pub fn to_prometheus(snap: &RegistrySnapshot) -> String {
     out
 }
 
-pub fn to_json(snap: &RegistrySnapshot) -> String {
+pub fn to_json(snap: &RegistrySnapshot, percentiles: &[f64]) -> String {
     let mut items = Vec::new();
     for m in &snap.metrics {
-        let pcts: Vec<String> = m.percentiles.iter()
+        let pcts: Vec<String> = percentiles_from_buckets(&m.buckets, percentiles)
+            .iter()
             .map(|(p, v)| format!("\"{}\":{}", fmt_pct(*p), v)).collect();
         items.push(format!(
             "{{\"name\":\"{}\",\"raw\":{},\"percentiles\":{{{}}}}}",
@@ -63,14 +65,15 @@ mod tests {
                 unit: Unit::Bytes,
                 labels: Labels::new().insert("dev", "eth0"),
                 raw: 50_000,
-                percentiles: vec![(50.0, 100_000), (99.0, 900_000)],
+                // 90 samples at 100_000, 10 at 900_000
+                buckets: vec![(100_000, 90), (900_000, 10)],
             }],
         }
     }
 
     #[test]
     fn prometheus_emits_raw_and_percentiles() {
-        let out = to_prometheus(&sample_snapshot());
+        let out = to_prometheus(&sample_snapshot(), &[50.0, 99.0]);
         assert!(out.contains("net_tx_bytes{dev=\"eth0\"} 50000"), "{out}");
         assert!(out.contains("net_tx_bytes_rate{dev=\"eth0\",percentile=\"99\"} 900000"), "{out}");
         assert!(out.contains("# TYPE net_tx_bytes counter"), "{out}");
@@ -78,7 +81,7 @@ mod tests {
 
     #[test]
     fn json_contains_metric_fields() {
-        let out = to_json(&sample_snapshot());
+        let out = to_json(&sample_snapshot(), &[50.0, 99.0]);
         assert!(out.contains("\"net/tx-bytes\""), "{out}");
         assert!(out.contains("\"raw\":50000"), "{out}");
     }

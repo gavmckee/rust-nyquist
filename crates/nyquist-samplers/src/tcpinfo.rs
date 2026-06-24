@@ -175,3 +175,9 @@ mod tests {
         assert_eq!(reg.raw(id), 9);
     }
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "tcpinfo",
+    init: |reg, iv| Box::new(TcpInfoSampler::new(reg, iv)),
+};

@@ -28,12 +28,12 @@ pub fn spawn_sampler(
 }
 
 /// Spawn a task that calls `sink.export()` every `export_interval`,
-/// passing a fresh snapshot from `reg` with the given `percentiles`.
+/// passing a fresh bucket-array snapshot from `reg`. Percentile selection is a
+/// consumer concern owned by each sink (design §3.4).
 pub fn spawn_sink(
     mut sink: Box<dyn Sink>,
     reg: Arc<Registry>,
     export_interval: Duration,
-    percentiles: Vec<f64>,
     fault_tolerant: bool,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -41,7 +41,7 @@ pub fn spawn_sink(
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             ticker.tick().await;
-            let snapshot = reg.snapshot(Instant::now(), &percentiles);
+            let snapshot = reg.snapshot(Instant::now());
             if let Err(e) = sink.export(&snapshot).await {
                 tracing::warn!(error = %e, "sink export failed");
                 if !fault_tolerant {

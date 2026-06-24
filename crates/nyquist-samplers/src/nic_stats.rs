@@ -20,6 +20,7 @@ const KEEP_PATTERNS: &[&str] = &[
 const QUEUE_STAT_SUFFIXES: &[(&str, &str, Unit)] = &[
     ("packets",       "nic/queue/rx_packets",       Unit::Count),
     ("bytes",         "nic/queue/rx_bytes",          Unit::Bytes),
+    ("dropped",       "nic/queue/rx_dropped",        Unit::Count),
     ("buff_alloc_err","nic/queue/rx_buff_alloc_err", Unit::Count),
 ];
 const TX_QUEUE_STAT_SUFFIXES: &[(&str, &str, Unit)] = &[
@@ -241,3 +242,9 @@ fn list_physical_ifaces() -> Vec<String> {
         }).collect())
         .unwrap_or_default()
 }
+
+#[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]
+static ENTRY: nyquist_core::registration::SamplerEntry = nyquist_core::registration::SamplerEntry {
+    name: "nic_stats",
+    init: |reg, iv| Box::new(NicStatsSampler::new(reg, iv)),
+};

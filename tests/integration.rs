@@ -52,7 +52,7 @@ async fn recorder_sink_writes_parquet_file() {
                 unit: Unit::Count,
                 labels: Labels::new(),
                 raw: 55,
-                percentiles: vec![(50.0, 20), (90.0, 40), (99.0, 50), (99.9, 55)],
+                buckets: vec![(20, 50), (40, 40), (50, 9), (55, 1)],
             },
         ],
     };

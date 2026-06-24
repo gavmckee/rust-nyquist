@@ -15,3 +15,4 @@ pub mod netstat;
 pub mod softirqs;
 pub mod nic_stats;
 pub mod inventory;
+pub mod process;
