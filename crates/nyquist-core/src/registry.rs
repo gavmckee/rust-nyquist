@@ -65,7 +65,11 @@ impl Registry {
             if let Some((prev_t, prev_v)) = s.prev {
                 if value >= prev_v {
                     let dt = now.saturating_duration_since(prev_t).as_secs_f64();
-                    if dt > 0.0 {
+                    // Require at least half the nominal 10 ms tick interval.
+                    // dt < 5 ms means the scheduler fired twice in rapid succession;
+                    // the resulting rate (delta / tiny_dt) would be wildly inflated
+                    // and produce bogus p99/p99.9 values.
+                    if dt >= 0.005 {
                         let rate = ((value - prev_v) as f64 / dt).round() as u64;
                         s.window.record(now, rate);
                     }
@@ -151,6 +155,26 @@ mod tests {
         let p50 = reg.percentile(id, now, 50.0);
         assert!((95_000..=105_000).contains(&p50), "rate p50 was {p50}");
         assert_eq!(reg.raw(id), 50_000);
+    }
+
+    #[test]
+    fn jitter_sample_below_min_dt_is_dropped() {
+        // A second record_counter call arriving only 1 ms after the first would
+        // produce rate = delta / 0.001 s — ~10× inflated.  The 5 ms guard must
+        // discard it so it never enters the histogram.
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
+        let id = reg.register(MetricDef::new("net/rx_bytes", Kind::Counter));
+        let t0 = Instant::now();
+        reg.record_counter(id, t0, 0);
+        // Jitter: second call only 1 ms later — should be dropped.
+        reg.record_counter(id, t0 + Duration::from_millis(1), 25_000_000);
+        // Normal 10 ms tick — should be the only recorded sample.
+        reg.record_counter(id, t0 + Duration::from_millis(10), 25_000_000);
+        let now = t0 + Duration::from_millis(50);
+        // Only the 10 ms interval sample was recorded: delta=0, rate=0.
+        // The jitter sample (which would have been ~25 GB/s) must not appear.
+        let p99 = reg.percentile(id, now, 99.0);
+        assert!(p99 < 1_000_000_000, "jitter sample leaked into histogram: p99 = {p99} bytes/s");
     }
 
     #[test]
