@@ -1,10 +1,16 @@
 const NAME: &str = "network/traffic";
 
-// 4 of 6 procfs /proc/net/dev metrics are covered here.
-// rx_errors and tx_errors are driver-level hardware counters with no generic
-// BPF hook; they remain in the procfs sampler as a documented gap.
+// rx_bytes and tx_bytes are intentionally NOT counted here.
+// The procfs NetworkSampler already reads those from /proc/net/dev with accurate
+// per-packet accounting (pre-GRO). The raw_tp/netif_receive_skb tracepoint fires
+// for GRO-coalesced super-packets, producing a bursty distribution that exceeds
+// the physical link capacity at high percentiles (p999 > 2× wire speed observed
+// on mlx5/200G). Procfs gives the correct values with richer labels {driver,mtu}.
+//
 // rx_dropped is approximate: only RX-path kfree_skb reasons are counted.
 // tx_dropped is exact: net_dev_xmit rc != 0.
+// rx_errors and tx_errors are driver-level hardware counters with no generic
+// BPF hook; they remain in the procfs sampler as a documented gap.
 //
 // Map layout: counters[ifindex * GROUP_WIDTH + slot] — mmap-direct u64 array.
 // Principle 2 (zero-syscall reads) and Principle 8 (arrays over hashmaps) met.
@@ -25,8 +31,7 @@ const COUNTER_GROUP_WIDTH: usize = 8;
 const MAX_IFINDEX: usize = 512;
 
 // Slot assignments within each ifindex group (must match mod.bpf.c).
-const RX_BYTES:   usize = 0;
-const TX_BYTES:   usize = 1;
+// Slots 0 (rx_bytes) and 1 (tx_bytes) are unused — see comment at top of file.
 const RX_DROPPED: usize = 2;
 const TX_DROPPED: usize = 3;
 
@@ -42,8 +47,6 @@ enum State {
 unsafe impl Send for State {}
 
 struct IfaceIds {
-    rx_bytes:   MetricId,
-    tx_bytes:   MetricId,
     rx_dropped: MetricId,
     tx_dropped: MetricId,
 }
@@ -85,8 +88,6 @@ impl NetworkTraffic {
         if ids.contains_key(&ifindex) { return; }
         let lbl = || Labels::new().insert("iface", name);
         ids.insert(ifindex, IfaceIds {
-            rx_bytes:   reg.register(MetricDef::new("network/receive/bytes",    Kind::Counter).unit(Unit::Bytes).labels(lbl())),
-            tx_bytes:   reg.register(MetricDef::new("network/transmit/bytes",   Kind::Counter).unit(Unit::Bytes).labels(lbl())),
             rx_dropped: reg.register(MetricDef::new("network/receive/dropped",  Kind::Counter).unit(Unit::Count).labels(lbl())),
             tx_dropped: reg.register(MetricDef::new("network/transmit/dropped", Kind::Counter).unit(Unit::Count).labels(lbl())),
         });
@@ -132,7 +133,11 @@ impl Sampler for NetworkTraffic {
                     self.state = State::Disabled;
                     return Ok(());
                 }
-                tracing::info!("network/traffic attached (raw_tp+kfree_skb, mmap array)");
+                tracing::info!("network/traffic attached (kfree_skb+net_dev_xmit, mmap array)");
+                // Skip reading counters on the init tick: `now` was captured by the
+                // scheduler before try_init() ran, so using it as prev would inflate
+                // dt on the next tick by ~50ms and produce a spuriously low first rate.
+                return Ok(());
             }
             State::Running { .. } => {}
         }
@@ -146,8 +151,6 @@ impl Sampler for NetworkTraffic {
             let base = ifindex as usize * COUNTER_GROUP_WIDTH;
             Self::ensure_ids(&mut self.ids, reg, ifindex, &name);
             if let Some(ids) = self.ids.get(&ifindex) {
-                reg.record_counter(ids.rx_bytes,   now, slice[base + RX_BYTES]);
-                reg.record_counter(ids.tx_bytes,   now, slice[base + TX_BYTES]);
                 reg.record_counter(ids.rx_dropped, now, slice[base + RX_DROPPED]);
                 reg.record_counter(ids.tx_dropped, now, slice[base + TX_DROPPED]);
             }

@@ -56,7 +56,13 @@ impl CpuVtime {
         let ids = (0..cpu_count).map(|cpu| {
             let mut row = [MetricId(0); 4];
             for (slot, &(field, _idx)) in STATES.iter().enumerate() {
-                let labels = Labels::new().insert("cpu", &format!("cpu{cpu}"));
+                // source="ebpf" keeps this kprobe/tracepoint series (nanoseconds)
+                // from colliding with the procfs cpu sampler's identically-named
+                // jiffies series for idle/iowait/irq/softirq. Same MetricId without
+                // it → mixed units overflow the rate histogram. Mirrors cpu/usage.
+                let labels = Labels::new()
+                    .insert("cpu", &format!("cpu{cpu}"))
+                    .insert("source", "ebpf");
                 row[slot] = reg.register(
                     MetricDef::new(format!("cpu/usage/{field}"), Kind::Counter)
                         .unit(Unit::Count)

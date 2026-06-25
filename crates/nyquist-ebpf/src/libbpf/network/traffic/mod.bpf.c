@@ -10,8 +10,8 @@
 #include <bpf/bpf_tracing.h>
 
 // counters[ifindex * GROUP_WIDTH + slot]:
-//   slot 0 — rx_bytes
-//   slot 1 — tx_bytes
+//   slot 0 — unused (was rx_bytes; removed — GRO batching aliased BPF counts)
+//   slot 1 — unused (was tx_bytes; removed — procfs NetworkSampler covers bytes)
 //   slot 2 — rx_dropped
 //   slot 3 — tx_dropped
 #define COUNTER_GROUP_WIDTH 8
@@ -25,31 +25,18 @@ struct {
     __uint(max_entries, MAX_IFINDEX * COUNTER_GROUP_WIDTH);
 } counters SEC(".maps");
 
-// RX bytes: fires when a packet enters the network stack from a device.
-SEC("raw_tp/netif_receive_skb")
-int BPF_PROG(netif_receive_skb, struct sk_buff *skb) {
-    if (!skb) return 0;
-    struct net_device *dev = BPF_CORE_READ(skb, dev);
-    if (!dev) return 0;
-    __u32 ifindex = BPF_CORE_READ(dev, ifindex);
-    if (ifindex >= MAX_IFINDEX) return 0;
-    __u64 len = BPF_CORE_READ(skb, len);
-    array_add(&counters, ifindex * COUNTER_GROUP_WIDTH + 0, len);
-    return 0;
-}
-
-// TX bytes + TX dropped: fires after the driver attempts to transmit an skb.
+// TX dropped: fires after the driver fails to transmit an skb (rc != 0).
+// TX bytes (rc == 0 branch) are intentionally omitted — use the procfs
+// NetworkSampler for byte counts. The raw_tp/netif_receive_skb hook is also
+// gone; it fired on GRO-coalesced super-packets, causing aliased p999 values
+// that exceeded the physical link capacity.
 SEC("raw_tp/net_dev_xmit")
 int BPF_PROG(net_dev_xmit, struct sk_buff *skb, int rc,
              struct net_device *dev, unsigned int skb_len) {
-    if (!dev) return 0;
+    if (!dev || rc == 0) return 0;
     __u32 ifindex = BPF_CORE_READ(dev, ifindex);
     if (ifindex >= MAX_IFINDEX) return 0;
-    if (rc == 0) {
-        array_add(&counters, ifindex * COUNTER_GROUP_WIDTH + 1, (__u64)skb_len);
-    } else {
-        array_add(&counters, ifindex * COUNTER_GROUP_WIDTH + 3, 1);
-    }
+    array_add(&counters, ifindex * COUNTER_GROUP_WIDTH + 3, 1);
     return 0;
 }
 
