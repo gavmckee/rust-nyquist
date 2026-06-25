@@ -18,6 +18,7 @@ pub struct Config {
     pub samplers:         BTreeMap<String, SamplerConfig>,
     pub recorder:         RecorderConfig,
     pub clickhouse:       ClickHouseConfig,
+    pub syswatch:         SysWatchConfig,
     pub perf:             PerfConfig,
     pub victoria_metrics: VictoriaMetricsConfig,
 }
@@ -141,6 +142,16 @@ impl Default for ClickHouseConfig {
     }
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct SysWatchConfig {
+    pub enabled: bool,
+}
+
+impl Default for SysWatchConfig {
+    fn default() -> Self { SysWatchConfig { enabled: false } }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -150,6 +161,7 @@ impl Default for Config {
             clickhouse:       ClickHouseConfig::default(),
             perf:             PerfConfig::default(),
             victoria_metrics: VictoriaMetricsConfig::default(),
+            syswatch:         SysWatchConfig::default(),
         }
     }
 }

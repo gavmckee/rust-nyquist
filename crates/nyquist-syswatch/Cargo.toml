@@ -1,0 +1,19 @@
+[package]
+name = "nyquist-syswatch"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+nyquist-sysconfig = { path = "../nyquist-sysconfig" }
+anyhow   = "1"
+tracing  = "0.1"
+tokio    = { version = "1", features = ["rt", "time", "sync"] }
+clickhouse = "0.13"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libbpf-rs = "0.24"
+libc      = "0.2"
+
+[target.'cfg(target_os = "linux")'.build-dependencies]
+libbpf-cargo = "0.24"

@@ -97,17 +97,37 @@ async fn main() -> anyhow::Result<()> {
             ch.insert_interval,
             config.general.fault_tolerant,
         ));
-        // Config watcher: polls sysconfig every 5s, writes sysconfig_values for
-        // plotting and sysconfig_changes as Grafana annotation events.
-        let watcher = nyquist_clickhouse::config_watcher::ConfigWatcher::new(
-            &ch.url,
-            &ch.database,
-            &ch.username,
-            &ch.password,
-            std::time::Duration::from_secs(5),
-        );
-        tokio::spawn(async move { watcher.run().await });
-        tracing::info!(url = %ch.url, database = %ch.database, "ClickHouse sink + config watcher enabled");
+        // Polling config watcher: only runs when syswatch BPF watcher is disabled.
+        // syswatch supersedes it with event-driven detection; running both would
+        // produce duplicate rows in sysconfig_changes.
+        if !config.syswatch.enabled {
+            let watcher = nyquist_clickhouse::config_watcher::ConfigWatcher::new(
+                &ch.url,
+                &ch.database,
+                &ch.username,
+                &ch.password,
+                std::time::Duration::from_secs(5),
+            );
+            tokio::spawn(async move { watcher.run().await });
+        }
+        tracing::info!(url = %ch.url, database = %ch.database, "ClickHouse sink enabled");
+    }
+
+    if config.syswatch.enabled {
+        if config.clickhouse.enabled {
+            let ch = &config.clickhouse;
+            let watcher = nyquist_syswatch::SysWatcher::new(
+                &ch.url, &ch.database, &ch.username, &ch.password,
+            );
+            tokio::spawn(async move {
+                if let Err(e) = watcher.run().await {
+                    tracing::error!(error = %e, "syswatch exited");
+                }
+            });
+            tracing::info!("syswatch enabled (BPF hooks + 60s poll fallback)");
+        } else {
+            tracing::warn!("syswatch requires [clickhouse] enabled = true");
+        }
     }
 
     tracing::info!(registered = nyquist_ebpf::registered(), "samplers registered (incl. BPF)");

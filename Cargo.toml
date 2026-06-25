@@ -21,7 +21,8 @@ nyquist-exposition = { path = "crates/nyquist-exposition" }
 nyquist-recorder = { path = "crates/nyquist-recorder" }
 nyquist-clickhouse = { path = "crates/nyquist-clickhouse" }
 nyquist-perf = { path = "crates/nyquist-perf" }
-nyquist-ebpf = { path = "crates/nyquist-ebpf" }
+nyquist-ebpf     = { path = "crates/nyquist-ebpf" }
+nyquist-syswatch = { path = "crates/nyquist-syswatch" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 libc = "0.2"
