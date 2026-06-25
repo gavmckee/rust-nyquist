@@ -2,4 +2,5 @@
 *.log
 *.pid
 throughput_report.html
+nyquist_bidir_report.html
 .mcp.json
