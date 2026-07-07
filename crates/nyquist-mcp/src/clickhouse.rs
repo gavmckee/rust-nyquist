@@ -19,8 +19,8 @@ impl ClickHouse {
             client: reqwest::Client::new(),
             url:    env("NYQUIST_CH_URL", "http://localhost:18123"),
             db:     env("NYQUIST_CH_DB", "nyquist_live"),
-            user:   env("NYQUIST_CH_USER", "default"),
-            pass:   env("NYQUIST_CH_PASS", "nyquist"),
+            user:   env("NYQUIST_CH_USER", "nyquist_ro"),
+            pass:   env("NYQUIST_CH_PASS", "nyquist_ro"),
         }
     }
 

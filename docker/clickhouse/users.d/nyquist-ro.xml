@@ -1,0 +1,26 @@
+<!-- Read-only user for the nyquist MCP server (and any other tooling that
+     should never write). Unlike a readonly=2 profile alone, the explicit
+     SELECT-only grant also withholds the URL/FILE/REMOTE grants, so the
+     url()/file() table functions (SSRF / filesystem reads from the server)
+     are denied at the access-control layer, not just by client-side checks. -->
+<clickhouse>
+    <profiles>
+        <nyquist_ro_profile>
+            <readonly>2</readonly>
+            <max_execution_time>30</max_execution_time>
+            <max_result_rows>1000000</max_result_rows>
+            <result_overflow_mode>break</result_overflow_mode>
+        </nyquist_ro_profile>
+    </profiles>
+    <users>
+        <nyquist_ro>
+            <password>nyquist_ro</password>
+            <profile>nyquist_ro_profile</profile>
+            <networks><ip>::/0</ip></networks>
+            <access_management>0</access_management>
+            <grants>
+                <query>GRANT SELECT ON nyquist_live.*</query>
+            </grants>
+        </nyquist_ro>
+    </users>
+</clickhouse>

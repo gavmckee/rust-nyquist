@@ -35,8 +35,12 @@ re-deriving the hard-won context captured in `src/knowledge.rs`.
 |-----|---------|
 | `NYQUIST_CH_URL` | `http://localhost:18123` |
 | `NYQUIST_CH_DB` | `nyquist_live` |
-| `NYQUIST_CH_USER` | `default` |
-| `NYQUIST_CH_PASS` | `nyquist` |
+| `NYQUIST_CH_USER` | `nyquist_ro` |
+| `NYQUIST_CH_PASS` | `nyquist_ro` |
+
+Defaults target the read-only user provisioned by
+`docker/clickhouse/users.d/nyquist-ro.xml` (SELECT-only grants: no
+writes, and no URL/FILE table functions).
 
 ## Build & register
 
@@ -52,7 +56,7 @@ Add to `.mcp.json` (transport: stdio):
     "nyquist": {
       "command": "/abs/path/to/target/release/nyquist-mcp",
       "args": [],
-      "env": { "NYQUIST_CH_DB": "nyquist_live", "NYQUIST_CH_PASS": "nyquist" }
+      "env": { "NYQUIST_CH_DB": "nyquist_live" }
     }
   }
 }

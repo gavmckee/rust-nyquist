@@ -21,6 +21,9 @@ services:
       CLICKHOUSE_PASSWORD: nyquist
     volumes:
       - ch-data:/var/lib/clickhouse
+      # Read-only user for the MCP server; see the file for why grants (not
+      # just readonly=2) are the mechanism.
+      - ./clickhouse/users.d/nyquist-ro.xml:/etc/clickhouse-server/users.d/nyquist-ro.xml:ro
     ulimits:
       nofile:
         soft: 262144
