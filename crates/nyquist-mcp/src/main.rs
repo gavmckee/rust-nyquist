@@ -105,7 +105,83 @@ fn fail(e: anyhow::Error) -> ErrorData {
     ErrorData::internal_error(e.to_string(), None)
 }
 
+/// Escape a string for interpolation inside a single-quoted SQL literal.
+fn esc_sql(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
+/// Table functions that reach outside the database: outbound HTTP (SSRF),
+/// server filesystem, or remote datasources. ClickHouse readonly=2 does NOT
+/// block these (verified: url() still makes outbound requests under it), so
+/// run_sql rejects them by name as defense in depth.
+const FORBIDDEN_FUNCS: &[&str] = &[
+    "url", "file", "remote", "remotesecure", "cluster", "clusterallreplicas",
+    "s3", "s3cluster", "gcs", "azureblobstorage", "hdfs", "iceberg", "deltalake",
+    "hudi", "mysql", "postgresql", "mongodb", "redis", "sqlite", "odbc", "jdbc",
+    "executable",
+];
+
+/// Lowercase the query and collapse SQL comments / whitespace runs to a single
+/// space, so a call like `URL /* x */ (...)` normalizes to `url (...)` before
+/// matching. May touch string-literal contents too — acceptable for a
+/// reject-only guard.
+fn normalize_sql(sql: &str) -> String {
+    let lower = sql.to_ascii_lowercase();
+    let b = lower.as_bytes();
+    let mut out = String::with_capacity(lower.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'/' && i + 1 < b.len() && b[i + 1] == b'*' {
+            i += 2;
+            while i + 1 < b.len() && !(b[i] == b'*' && b[i + 1] == b'/') { i += 1; }
+            i = (i + 2).min(b.len());
+            if !out.ends_with(' ') { out.push(' '); }
+        } else if b[i] == b'-' && i + 1 < b.len() && b[i + 1] == b'-' {
+            while i < b.len() && b[i] != b'\n' { i += 1; }
+            if !out.ends_with(' ') { out.push(' '); }
+        } else if b[i].is_ascii_whitespace() {
+            if !out.ends_with(' ') { out.push(' '); }
+            i += 1;
+        } else {
+            out.push(b[i] as char);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Return the first forbidden table function invoked in `sql`, if any.
+/// A match is the function name at identifier boundaries followed
+/// (after optional whitespace) by an opening paren.
+fn forbidden_function(sql: &str) -> Option<&'static str> {
+    let norm = normalize_sql(sql);
+    let nb = norm.as_bytes();
+    let is_ident = |c: u8| c.is_ascii_alphanumeric() || c == b'_';
+    for f in FORBIDDEN_FUNCS {
+        let mut start = 0;
+        while let Some(pos) = norm[start..].find(f) {
+            let i = start + pos;
+            let end = i + f.len();
+            let left_ok = i == 0 || !is_ident(nb[i - 1]);
+            let right_ok = end >= nb.len() || !is_ident(nb[end]);
+            if left_ok && right_ok {
+                let mut j = end;
+                while j < nb.len() && nb[j] == b' ' { j += 1; }
+                if j < nb.len() && nb[j] == b'(' {
+                    return Some(f);
+                }
+            }
+            start = end;
+        }
+    }
+    None
+}
+
 // ---------- tools ----------
+
+impl Default for NyquistMcp {
+    fn default() -> Self { Self::new() }
+}
 
 #[tool_router]
 impl NyquistMcp {
@@ -131,7 +207,7 @@ impl NyquistMcp {
                      FROM samples WHERE name='{name}' AND tags['iface']='{iface}' \
                        AND ts >= now() - INTERVAL {min} MINUTE \
                      ORDER BY t_ms FORMAT TSVWithNames",
-                    iface = a.iface, min = a.minutes
+                    iface = esc_sql(&a.iface), min = a.minutes
                 )
             }
             _ => format!(
@@ -144,7 +220,7 @@ impl NyquistMcp {
                  WHERE name IN ('network_receive_bytes','network_transmit_bytes') \
                    AND tags['iface']='{iface}' AND ts >= now() - INTERVAL {min} MINUTE \
                  GROUP BY t_ms ORDER BY t_ms FORMAT TSVWithNames",
-                iface = a.iface, min = a.minutes
+                iface = esc_sql(&a.iface), min = a.minutes
             ),
         };
         let rows = self.ch.query(&sql).await.map_err(fail)?;
@@ -169,7 +245,7 @@ impl NyquistMcp {
                round(maxIf(g,g>0.01),2) hottest_gbps, round(minIf(g,g>0.01),2) coldest_gbps, \
                round(stddevPopIf(g,g>0.01)/nullIf(avgIf(g,g>0.01),0)*100,1) cv_pct \
              FROM q FORMAT TSVWithNames",
-            iface = a.iface, min = a.minutes
+            iface = esc_sql(&a.iface), min = a.minutes
         );
         let rows = self.ch.query(&sql).await.map_err(fail)?;
 
@@ -265,7 +341,7 @@ impl NyquistMcp {
             "SELECT name, count() samples, anyLast(mapKeys(tags)) tag_keys \
              FROM samples WHERE name LIKE '%{f}%' AND ts >= now() - INTERVAL 10 MINUTE \
              GROUP BY name ORDER BY name FORMAT TSVWithNames",
-            f = a.filter.replace('\'', "")
+            f = esc_sql(&a.filter)
         );
         let rows = self.ch.query(&sql).await.map_err(fail)?;
         ok(rows)
@@ -282,6 +358,14 @@ impl NyquistMcp {
         if !(head.starts_with("SELECT") || head.starts_with("WITH")) {
             return Err(ErrorData::invalid_params(
                 "only read-only SELECT/WITH queries are allowed",
+                None,
+            ));
+        }
+        // readonly=2 (set on every request in clickhouse.rs) blocks writes/DDL
+        // server-side, but not the url()/file()/remote() family — reject those here.
+        if let Some(f) = forbidden_function(&a.sql) {
+            return Err(ErrorData::invalid_params(
+                format!("table function '{f}' is not allowed here"),
                 None,
             ));
         }
@@ -385,4 +469,48 @@ async fn main() -> anyhow::Result<()> {
     let service = NyquistMcp::new().serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{esc_sql, forbidden_function};
+
+    #[test]
+    fn esc_sql_escapes_quote_and_backslash() {
+        assert_eq!(esc_sql("plain"), "plain");
+        assert_eq!(esc_sql("a'b"), "a\\'b");
+        assert_eq!(esc_sql(r"a\b"), r"a\\b");
+        // Injection attempt closes with the quote escaped, not the literal.
+        assert_eq!(esc_sql("x' OR 1=1 --"), "x\\' OR 1=1 --");
+    }
+
+    #[test]
+    fn forbidden_function_catches_direct_calls() {
+        assert_eq!(
+            forbidden_function("SELECT * FROM url('http://x', 'CSV', 'a String')"),
+            Some("url")
+        );
+        assert_eq!(forbidden_function("SELECT * FROM file('/etc/passwd')"), Some("file"));
+        assert_eq!(
+            forbidden_function("SELECT * FROM remote('host', db.table)"),
+            Some("remote")
+        );
+    }
+
+    #[test]
+    fn forbidden_function_catches_obfuscation() {
+        assert_eq!(forbidden_function("SELECT * FROM URL ('http://x')"), Some("url"));
+        assert_eq!(forbidden_function("SELECT * FROM url/* c */('http://x')"), Some("url"));
+        assert_eq!(forbidden_function("SELECT * FROM url\n('http://x')"), Some("url"));
+    }
+
+    #[test]
+    fn forbidden_function_allows_legit_queries() {
+        assert_eq!(forbidden_function("SELECT name, p99 FROM samples WHERE name='x'"), None);
+        // Substring of another identifier is not a match.
+        assert_eq!(forbidden_function("SELECT curl(x) FROM samples"), None);
+        assert_eq!(forbidden_function("SELECT my_url(x) FROM samples"), None);
+        // Column named like a function but never called.
+        assert_eq!(forbidden_function("SELECT url FROM samples"), None);
+    }
 }
