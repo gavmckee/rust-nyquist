@@ -92,6 +92,9 @@ impl Sampler for Retransmit {
                     return Ok(());
                 }
                 tracing::info!("tcp/retransmit attached (kprobe, mmap counter)");
+                // Skip the attach tick — stale `now` inflates the next dt
+                // (mirrors network/traffic).
+                return Ok(());
             }
             State::Running { .. } => {}
         }

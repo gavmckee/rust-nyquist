@@ -115,6 +115,9 @@ impl Sampler for CpuVtime {
                     cpus = self.cpu_count,
                     "cpu/vtime attached (sched_switch + irq/softirq tracepoints, mmap counters)"
                 );
+                // Skip the attach tick — stale `now` inflates the next dt
+                // (mirrors network/traffic).
+                return Ok(());
             }
             State::Running { .. } => {}
         }

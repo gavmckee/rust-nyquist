@@ -118,6 +118,11 @@ impl Sampler for CpuUsage {
                     return Ok(());
                 }
                 tracing::info!(cpus = self.cpu_count, "cpu/usage attached (kprobe, mmap counters)");
+                // Skip the attach tick: `now` was captured by the scheduler
+                // before try_init ran, so recording against it would inflate
+                // the next tick's dt and produce a spuriously low first rate
+                // (mirrors network/traffic).
+                return Ok(());
             }
             State::Running { .. } => {}
         }

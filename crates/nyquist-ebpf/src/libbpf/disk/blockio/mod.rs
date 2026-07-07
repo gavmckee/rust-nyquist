@@ -143,6 +143,9 @@ impl Sampler for BlockIo {
                     devices = self.devices.len(),
                     "disk/blockio attached (raw_tp/block_rq_complete, mmap arrays)"
                 );
+                // Skip the attach tick — stale `now` inflates the next dt
+                // (mirrors network/traffic).
+                return Ok(());
             }
             State::Running { .. } => {}
         }
