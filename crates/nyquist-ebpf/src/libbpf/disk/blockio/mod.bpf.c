@@ -67,23 +67,36 @@ int BPF_PROG(block_rq_complete, struct request *rq, int error,
     if (slot >= MAX_DEVICES) return 0;
 
     // REQ_OP_MASK = lower 8 bits of cmd_flags; REQ_OP_READ=0, REQ_OP_WRITE=1.
-    u32 op    = (u32)BPF_CORE_READ(rq, cmd_flags) & 0xFF;
-    u32 bytes = BPF_CORE_READ(rq, __data_len);
-    u64 start = BPF_CORE_READ(rq, start_time_ns);
-    u64 now   = bpf_ktime_get_ns();
-    u64 delta = (now > start) ? (now - start) : 0;
+    // Only READ and WRITE are counted: classifying every non-read op as a
+    // write inflated write_bytes with multi-GB DISCARD/WRITE_ZEROES payloads
+    // and booked FLUSHes as write requests.
+    u32 op = (u32)BPF_CORE_READ(rq, cmd_flags) & 0xFF;
+    if (op != 0 && op != 1) return 0;
+    u32 is_write = op;
+
+    // nr_bytes (tracepoint arg) is what THIS completion finished;
+    // rq->__data_len is the length still outstanding at trace time.
+    // Multi-segment requests complete across several events — reading
+    // __data_len here over-counted bytes and double-counted requests.
+    u32 remaining = BPF_CORE_READ(rq, __data_len);
 
     // counters layout: 0=read_bytes, 1=write_bytes, 2=read_requests, 3=write_requests
-    u32 is_write = (op != 0) ? 1 : 0;
-    array_add(&counters, slot * COUNTER_GROUP_WIDTH + is_write,     (u64)bytes); // 0 or 1
-    array_add(&counters, slot * COUNTER_GROUP_WIDTH + 2 + is_write, 1);          // 2 or 3
+    array_add(&counters, slot * COUNTER_GROUP_WIDTH + is_write, (u64)nr_bytes); // 0 or 1
 
-    u32 dir = is_write; // 0=read, 1=write — reuse for latency offset
+    // Request count and full-request latency only on the FINAL completion
+    // (this event finishes everything still outstanding).
+    if (nr_bytes >= remaining) {
+        u64 start = BPF_CORE_READ(rq, start_time_ns);
+        u64 now   = bpf_ktime_get_ns();
+        u64 delta = (now > start) ? (now - start) : 0;
 
-    // latency histogram — offset into the per-device, per-direction slice
-    u32 hist_idx = value_to_index(delta, HISTOGRAM_POWER);
-    u32 base     = slot * 2 * HISTOGRAM_BUCKETS + dir * HISTOGRAM_BUCKETS;
-    array_incr(&latency, base + hist_idx);
+        array_add(&counters, slot * COUNTER_GROUP_WIDTH + 2 + is_write, 1); // 2 or 3
+
+        // latency histogram — offset into the per-device, per-direction slice
+        u32 hist_idx = value_to_index(delta, HISTOGRAM_POWER);
+        u32 base     = slot * 2 * HISTOGRAM_BUCKETS + is_write * HISTOGRAM_BUCKETS;
+        array_incr(&latency, base + hist_idx);
+    }
 
     return 0;
 }
