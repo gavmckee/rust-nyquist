@@ -18,6 +18,12 @@ impl MemorySampler {
     }
     fn ingest(&mut self, reg: &Registry, now: Instant, text: &str) {
         for (key, bytes) in parse_meminfo(text) {
+            // VmallocTotal is the vmalloc ADDRESS-SPACE size, not a memory
+            // measurement — 12.5 PB on 5-level-paging x86_64, which exceeds
+            // the histogram range (2^52-1) and pinned this metric's
+            // percentiles at the top bucket while tripping the clamp warning
+            // on every boot. VmallocChunk is a legacy always-0 field.
+            if key == "VmallocTotal" || key == "VmallocChunk" { continue; }
             let id = match self.ids.get(&key) {
                 Some(&id) => id,
                 None => {

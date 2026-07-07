@@ -48,11 +48,13 @@ impl SysWatcher {
                 info!(
                     sysctl    = fmt(&report.sysctl),
                     ethtool   = fmt(&report.ethtool),
+                    ethnl     = fmt(&report.ethnl),
                     rtnetlink = fmt(&report.rtnetlink),
                     "syswatch: BPF hooks loaded"
                 );
                 if let Err(e) = &report.sysctl    { warn!(error = %e, "syswatch: sysctl hook"); }
                 if let Err(e) = &report.ethtool   { warn!(error = %e, "syswatch: ethtool hook"); }
+                if let Err(e) = &report.ethnl     { warn!(error = %e, "syswatch: ethnl hook"); }
                 if let Err(e) = &report.rtnetlink { warn!(error = %e, "syswatch: rtnetlink hook"); }
                 tokio::task::spawn_blocking(move || loop {
                     if let Err(e) = state.poll(Duration::from_millis(200)) {
@@ -114,10 +116,17 @@ impl SysWatcher {
                             SW_SRC_ETHTOOL => {
                                 let iface = ev.ifname_str().to_string();
                                 tracing::debug!(iface, ethcmd = ev.ethcmd, comm = ev.comm_str(), "syswatch: ethtool SET detected");
+                                // ethcmd 0 = the netlink path; ifname can be
+                                // empty there if the ops_begin cache missed.
+                                let scope = if iface.is_empty() {
+                                    AttrScope::EthtoolAny
+                                } else {
+                                    AttrScope::Iface { name: iface }
+                                };
                                 events.push(EventAttr {
                                     pid:   ev.pid,
                                     comm:  ev.comm_str().to_string(),
-                                    scope: AttrScope::Iface { name: iface },
+                                    scope,
                                 });
                             }
                             SW_SRC_RTNETLINK => {

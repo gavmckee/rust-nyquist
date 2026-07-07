@@ -7780,12 +7780,6 @@ perf_hw_cache_misses_rate{cpu="cpu28",percentile="50"} 67583
 perf_hw_cache_misses_rate{cpu="cpu28",percentile="90"} 171007
 perf_hw_cache_misses_rate{cpu="cpu28",percentile="99"} 708607
 perf_hw_cache_misses_rate{cpu="cpu28",percentile="99.9"} 2523135
-# TYPE memory_vmalloctotal gauge
-memory_vmalloctotal 14073748835531776
-memory_vmalloctotal_value{percentile="50"} 4503599627370495
-memory_vmalloctotal_value{percentile="90"} 4503599627370495
-memory_vmalloctotal_value{percentile="99"} 4503599627370495
-memory_vmalloctotal_value{percentile="99.9"} 4503599627370495
 # TYPE network_transmit_errors counter
 network_transmit_errors{driver="veth",iface="veth8b2af53",mtu="1500"} 0
 network_transmit_errors_rate{driver="veth",iface="veth8b2af53",mtu="1500",percentile="50"} 0
@@ -25300,12 +25294,6 @@ perf_hw_instructions_rate{cpu="cpu104",percentile="50"} 131071999
 perf_hw_instructions_rate{cpu="cpu104",percentile="90"} 241172479
 perf_hw_instructions_rate{cpu="cpu104",percentile="99"} 767557631
 perf_hw_instructions_rate{cpu="cpu104",percentile="99.9"} 1669332991
-# TYPE memory_vmallocchunk gauge
-memory_vmallocchunk 0
-memory_vmallocchunk_value{percentile="50"} 0
-memory_vmallocchunk_value{percentile="90"} 0
-memory_vmallocchunk_value{percentile="99"} 0
-memory_vmallocchunk_value{percentile="99.9"} 0
 # TYPE perf_hw_branch_misses counter
 perf_hw_branch_misses{cpu="cpu177"} 24923526
 perf_hw_branch_misses_rate{cpu="cpu177",percentile="50"} 346111

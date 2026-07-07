@@ -27,6 +27,11 @@ pub enum AttrScope {
     /// An ethtool SET on a specific interface. Claims any key whose interface
     /// segment matches (ring.*, channels.*, coalesce.*, rss.*, mtu.*, msix.*).
     Iface { name: String },
+    /// An ethtool-netlink SET whose interface could not be recovered (the
+    /// ops_begin cache missed). Claims ethtool-domain keys on ANY interface —
+    /// still far better than "unknown", and two concurrent ethtool writers in
+    /// one drain window is rare.
+    EthtoolAny,
     /// An rtnetlink link change (iface unknown from the event). Claims only
     /// link-level keys (mtu.*), never sysctl.* keys.
     Link,
@@ -44,11 +49,19 @@ fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
     }
     // Interface-scoped keys: "<class>.<iface>" or "<class>.<iface>.<field>".
     let iface_of_key = key.split('.').nth(1);
+    let ethtool_domain = ["ring.", "channels.", "coalesce.", "rss.", "msix."]
+        .iter()
+        .any(|p| key.starts_with(p));
     events
         .iter()
         .find(|e| {
             matches!(&e.scope, AttrScope::Iface { name }
                 if Some(name.as_str()) == iface_of_key)
+        })
+        .or_else(|| {
+            events.iter().find(|e| {
+                matches!(e.scope, AttrScope::EthtoolAny) && ethtool_domain
+            })
         })
         .or_else(|| {
             events.iter().find(|e| {
@@ -193,6 +206,23 @@ mod tests {
         assert_eq!(resolve("mtu.ens1f1np1", &events).unwrap().comm, "lldpd");
         // ...but not for ethtool-domain keys like channels.
         assert!(resolve("channels.ens1f1np1.rx", &events).is_none());
+    }
+
+    #[test]
+    fn ethnl_event_without_iface_claims_ethtool_domain_only() {
+        let events = vec![ev(500, "ethtool", AttrScope::EthtoolAny)];
+        // Claims ethtool-domain keys on any interface...
+        assert_eq!(resolve("ring.ens1f0np0.rx", &events).unwrap().comm, "ethtool");
+        assert_eq!(resolve("channels.eth9.combined", &events).unwrap().comm, "ethtool");
+        // ...but never sysctl or link-level keys.
+        assert!(resolve("sysctl.tcp_rmem_max", &events).is_none());
+        assert!(resolve("mtu.eth0", &events).is_none());
+        // A specific Iface event beats EthtoolAny for its own interface.
+        let both = vec![
+            ev(1, "generic", AttrScope::EthtoolAny),
+            ev(2, "specific", AttrScope::Iface { name: "eth0".into() }),
+        ];
+        assert_eq!(resolve("ring.eth0.rx", &both).unwrap().comm, "specific");
     }
 
     #[test]

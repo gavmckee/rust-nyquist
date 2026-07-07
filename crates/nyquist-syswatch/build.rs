@@ -25,6 +25,7 @@ fn generate_skeletons() {
     let programs = [
         ("bpf/sysctl",    "syswatch_sysctl"),
         ("bpf/ethtool",   "syswatch_ethtool"),
+        ("bpf/ethnl",     "syswatch_ethnl"),
         ("bpf/rtnetlink", "syswatch_rtnetlink"),
     ];
 

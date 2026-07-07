@@ -4,6 +4,9 @@ mod sysctl_skel {
 mod ethtool_skel {
     include!(concat!(env!("OUT_DIR"), "/syswatch_ethtool.bpf.rs"));
 }
+mod ethnl_skel {
+    include!(concat!(env!("OUT_DIR"), "/syswatch_ethnl.bpf.rs"));
+}
 mod rtnetlink_skel {
     include!(concat!(env!("OUT_DIR"), "/syswatch_rtnetlink.bpf.rs"));
 }
@@ -18,6 +21,7 @@ use crate::event::SwEvent;
 pub struct BpfState {
     _sysctl:    Option<Box<sysctl_skel::ModSkel<'static>>>,
     _ethtool:   Option<Box<ethtool_skel::ModSkel<'static>>>,
+    _ethnl:     Option<Box<ethnl_skel::ModSkel<'static>>>,
     _rtnetlink: Option<Box<rtnetlink_skel::ModSkel<'static>>>,
     rb:         RingBuffer<'static>,
 }
@@ -27,6 +31,7 @@ unsafe impl Send for BpfState {}
 pub struct LoadReport {
     pub sysctl:    Result<(), String>,
     pub ethtool:   Result<(), String>,
+    pub ethnl:     Result<(), String>,
     pub rtnetlink: Result<(), String>,
 }
 
@@ -40,12 +45,13 @@ impl BpfState {
         // from them in phase 2.
         let (sc, sc_r) = load_sysctl();
         let (eth, eth_r) = load_ethtool();
+        let (enl, enl_r) = load_ethnl();
         let (nl, nl_r) = load_rtnetlink();
 
-        if sc.is_none() && eth.is_none() && nl.is_none() {
+        if sc.is_none() && eth.is_none() && enl.is_none() && nl.is_none() {
             return Err(anyhow::anyhow!(
-                "all BPF programs failed — sysctl: {} | ethtool: {} | rtnetlink: {}",
-                err_str(&sc_r), err_str(&eth_r), err_str(&nl_r),
+                "all BPF programs failed — sysctl: {} | ethtool: {} | ethnl: {} | rtnetlink: {}",
+                err_str(&sc_r), err_str(&eth_r), err_str(&enl_r), err_str(&nl_r),
             ));
         }
 
@@ -65,6 +71,11 @@ impl BpfState {
             let map: &'static _ = unsafe { &*(&skel.maps.events as *const _) };
             builder.add(map, move |d: &[u8]| { forward(d, &tx2); 0 })?;
         }
+        if let Some(ref skel) = enl {
+            let tx2 = tx.clone();
+            let map: &'static _ = unsafe { &*(&skel.maps.events as *const _) };
+            builder.add(map, move |d: &[u8]| { forward(d, &tx2); 0 })?;
+        }
         if let Some(ref skel) = nl {
             let tx2 = tx;
             let map: &'static _ = unsafe { &*(&skel.maps.events as *const _) };
@@ -73,8 +84,8 @@ impl BpfState {
 
         let rb: RingBuffer<'static> = unsafe { std::mem::transmute(builder.build()?) };
         Ok((
-            BpfState { _sysctl: sc, _ethtool: eth, _rtnetlink: nl, rb },
-            LoadReport { sysctl: sc_r, ethtool: eth_r, rtnetlink: nl_r },
+            BpfState { _sysctl: sc, _ethtool: eth, _ethnl: enl, _rtnetlink: nl, rb },
+            LoadReport { sysctl: sc_r, ethtool: eth_r, ethnl: enl_r, rtnetlink: nl_r },
         ))
     }
 
@@ -115,6 +126,22 @@ fn load_sysctl() -> (Option<Box<sysctl_skel::ModSkel<'static>>>, Result<(), Stri
 fn load_ethtool() -> (Option<Box<ethtool_skel::ModSkel<'static>>>, Result<(), String>) {
     let obj = Box::leak(Box::new(MaybeUninit::uninit()));
     let open = match ethtool_skel::ModSkelBuilder::default().open(obj) {
+        Err(e) => return (None, Err(e.to_string())),
+        Ok(o)  => o,
+    };
+    let mut loaded = match open.load() {
+        Err(e) => return (None, Err(e.to_string())),
+        Ok(l)  => l,
+    };
+    if let Err(e) = loaded.attach() {
+        return (None, Err(e.to_string()));
+    }
+    (Some(Box::new(loaded)), Ok(()))
+}
+
+fn load_ethnl() -> (Option<Box<ethnl_skel::ModSkel<'static>>>, Result<(), String>) {
+    let obj = Box::leak(Box::new(MaybeUninit::uninit()));
+    let open = match ethnl_skel::ModSkelBuilder::default().open(obj) {
         Err(e) => return (None, Err(e.to_string())),
         Ok(o)  => o,
     };
