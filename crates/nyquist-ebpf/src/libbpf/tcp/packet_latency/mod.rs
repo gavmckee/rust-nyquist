@@ -20,6 +20,7 @@ enum State {
     Running {
         _skel: Box<skel::ModSkel<'static>>,
         ptr: *const u64,
+        dropped_ptr: *const u64,
     },
 }
 
@@ -30,6 +31,7 @@ pub struct PacketLatency {
     interval: Duration,
     state: State,
     metric_id: Option<MetricId>,
+    dropped_id: MetricId,
 }
 
 impl PacketLatency {
@@ -42,7 +44,15 @@ impl PacketLatency {
                 .unit(Unit::None)
                 .labels(Labels::new().insert("source", "ebpf")),
         );
-        PacketLatency { interval, state: State::Uninit, metric_id: Some(id) }
+        // Self-metric: samples lost because the flow-tracking map was full.
+        // Nonzero here means the latency distribution is biased against the
+        // busiest periods — alert on it rather than trusting quiet percentiles.
+        let dropped_id = reg.register(
+            MetricDef::new("nyquist/bpf/dropped_samples", Kind::Counter)
+                .unit(Unit::Count)
+                .labels(Labels::new().insert("sampler", NAME)),
+        );
+        PacketLatency { interval, state: State::Uninit, metric_id: Some(id), dropped_id }
     }
 
     fn try_init(&mut self) -> anyhow::Result<()> {
@@ -54,18 +64,22 @@ impl PacketLatency {
         let mut loaded = open_skel.load()?;
         loaded.attach()?;
 
-        // dup the map fd and mmap it; leak the mmap so it lives with the skel.
-        let raw_fd = loaded.maps.latency.as_fd().as_raw_fd();
-        let dup_fd = unsafe { libc::dup(raw_fd) };
-        anyhow::ensure!(dup_fd >= 0, "dup failed: {}", std::io::Error::last_os_error());
-        let file = unsafe { std::fs::File::from_raw_fd(dup_fd) };
-        let bytes = BPF_BUCKETS * std::mem::size_of::<u64>();
-        let mmap = unsafe { MmapOptions::new().len(bytes).map(&file)? };
-        let ptr = mmap.as_ptr() as *const u64;
-        std::mem::forget(mmap); // intentionally leaked; lives with the skel
+        // dup each map fd and mmap it; leak the mmaps so they live with the skel.
+        let mmap_fd = |raw_fd: i32, entries: usize| -> anyhow::Result<*const u64> {
+            let dup_fd = unsafe { libc::dup(raw_fd) };
+            anyhow::ensure!(dup_fd >= 0, "dup failed: {}", std::io::Error::last_os_error());
+            let file = unsafe { std::fs::File::from_raw_fd(dup_fd) };
+            let bytes = entries * std::mem::size_of::<u64>();
+            let mmap = unsafe { MmapOptions::new().len(bytes).map(&file)? };
+            let ptr = mmap.as_ptr() as *const u64;
+            std::mem::forget(mmap); // intentionally leaked; lives with the skel
+            Ok(ptr)
+        };
+        let ptr = mmap_fd(loaded.maps.latency.as_fd().as_raw_fd(), BPF_BUCKETS)?;
+        let dropped_ptr = mmap_fd(loaded.maps.dropped.as_fd().as_raw_fd(), 8)?;
 
         let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
-        self.state = State::Running { _skel: skel, ptr };
+        self.state = State::Running { _skel: skel, ptr, dropped_ptr };
         Ok(())
     }
 
@@ -99,6 +113,11 @@ impl Sampler for PacketLatency {
         let counts = self.read_counts();
         if let Some(id) = self.metric_id {
             reg.record_distribution_buckets(id, now, buckets_from_counts(&counts));
+        }
+        if let State::Running { dropped_ptr, .. } = &self.state {
+            // SAFETY: slot 0 of the 8-entry mmapable dropped array.
+            let dropped = unsafe { std::ptr::read_volatile(*dropped_ptr) };
+            reg.record_counter(self.dropped_id, now, dropped);
         }
         Ok(())
     }

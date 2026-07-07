@@ -9,8 +9,13 @@
 
 #define HISTOGRAM_BUCKETS HISTOGRAM_BUCKETS_POW_3
 #define HISTOGRAM_POWER 3
-#define MAX_ENTRIES 10240
+// 64k concurrent data-carrying flows (~4.6 MB kernel-side). The previous
+// 10240 was exceeded on busy 100-200G hosts, and the resulting insert
+// failures silently dropped latency samples with load-correlated bias.
+#define MAX_ENTRIES 65536
 #define NO_EXIST 1
+#define E2BIG  7
+#define ENOMEM 12
 
 // Per-socket entry timestamp. Key is the u64 cast of `struct sock*` — the
 // documented pointer-key exception (design §5.1): no bounded integer index
@@ -21,6 +26,18 @@ struct {
     __type(key, u64);
     __type(value, u64);
 } start SEC(".maps");
+
+// dropped[0]: samples lost because the start map was FULL (E2BIG/ENOMEM
+// from update). EEXIST is excluded — NO_EXIST deliberately keeps the FIRST
+// pending timestamp per socket, so "already tracked" is the normal case,
+// not a drop. Userspace exposes this as a self-metric.
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(map_flags, BPF_F_MMAPABLE);
+    __type(key, u32);
+    __type(value, u64);
+    __uint(max_entries, 8);
+} dropped SEC(".maps");
 
 // In-kernel H2 histogram of RTT in MICROSECONDS (the metric is tcp/rtt_us;
 // bucketing raw ktime ns here made every bucket bound 1000x the implied
@@ -42,7 +59,9 @@ static int handle_tcp_probe(struct sock *sk, struct sk_buff *skb) {
     u64 len = BPF_CORE_READ(skb, len);
     if (len <= doff * 4) return 0; // pure ACK, no data
     u64 id = sock_ident(sk), ts = bpf_ktime_get_ns();
-    bpf_map_update_elem(&start, &id, &ts, NO_EXIST);
+    long rc = bpf_map_update_elem(&start, &id, &ts, NO_EXIST);
+    if (rc == -E2BIG || rc == -ENOMEM)
+        array_incr(&dropped, 0);
     return 0;
 }
 
