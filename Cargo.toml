@@ -49,7 +49,7 @@ arrow-schema = "53"
 parquet = { version = "53", default-features = false }
 rmcp = "1.8"
 schemars = "1"
-perf-event = "0.4"
+perf-event2 = "0.7"
 
 [package]
 name = "nyquist"

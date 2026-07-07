@@ -7,8 +7,10 @@ use nyquist_core::sampler::{Sampler, SamplerError};
 #[cfg(target_os = "linux")]
 use perf_event::events::Software;
 #[cfg(target_os = "linux")]
-use crate::events::{PerfCounter, linux::PerfError};
+use crate::events::{PerfGroup, linux::PerfError};
 
+// Read as one group per CPU (single read() syscall for all three; software
+// events always co-schedule, so no PMU-fit concern — see hw.rs).
 #[cfg(target_os = "linux")]
 const SW_EVENTS: &[(&str, Software)] = &[
     ("perf/sw/context_switches", Software::CONTEXT_SWITCHES),
@@ -20,7 +22,9 @@ pub struct SoftwareSampler {
     interval: Duration,
     num_cpus: usize,
     #[cfg(target_os = "linux")]
-    counters:    Vec<(MetricId, PerfCounter)>,
+    groups:      Vec<(Vec<MetricId>, PerfGroup)>,
+    #[cfg(target_os = "linux")]
+    scratch:     Vec<u64>,
     #[cfg(target_os = "linux")]
     disabled:    bool,
     #[cfg(target_os = "linux")]
@@ -33,7 +37,9 @@ impl SoftwareSampler {
             interval,
             num_cpus,
             #[cfg(target_os = "linux")]
-            counters:    Vec::new(),
+            groups:      Vec::new(),
+            #[cfg(target_os = "linux")]
+            scratch:     Vec::new(),
             #[cfg(target_os = "linux")]
             disabled:    false,
             #[cfg(target_os = "linux")]
@@ -58,15 +64,16 @@ impl SoftwareSampler {
     fn try_init(&mut self, reg: &Registry) -> Result<(), PerfError> {
         for cpu in 0..self.num_cpus {
             let cpu_label = format!("cpu{cpu}");
-            for (name, event) in SW_EVENTS {
-                let counter = PerfCounter::open(cpu, *event)?;
-                let id = reg.register(
+            let events: Vec<Software> = SW_EVENTS.iter().map(|&(_, e)| e).collect();
+            let group = PerfGroup::open(cpu, &events)?;
+            let ids = SW_EVENTS.iter().map(|(name, _)| {
+                reg.register(
                     MetricDef::new(*name, Kind::Counter)
                         .unit(Unit::Count)
                         .labels(Labels::new().insert("cpu", &cpu_label)),
-                );
-                self.counters.push((id, counter));
-            }
+                )
+            }).collect();
+            self.groups.push((ids, group));
         }
         Ok(())
     }
@@ -95,9 +102,11 @@ impl Sampler for SoftwareSampler {
                     return Err(Box::new(e));
                 }
             }
-            for (id, counter) in &mut self.counters {
-                let v = counter.read()?;
-                reg.record_counter(*id, now, v);
+            for (ids, group) in &mut self.groups {
+                group.read_into(&mut self.scratch)?;
+                for (id, &v) in ids.iter().zip(&self.scratch) {
+                    reg.record_counter(*id, now, v);
+                }
             }
         }
         Ok(())

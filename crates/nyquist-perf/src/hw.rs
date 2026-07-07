@@ -7,23 +7,36 @@ use nyquist_core::sampler::{Sampler, SamplerError};
 #[cfg(target_os = "linux")]
 use perf_event::events::Hardware;
 #[cfg(target_os = "linux")]
-use crate::events::{PerfCounter, linux::PerfError};
+use crate::events::{PerfGroup, linux::PerfError};
 
+// Events are read per-CPU as GROUPS: one read() syscall returns a whole
+// group (previously one syscall per event per CPU — measured at whole cores
+// of system time on a 224-CPU host). A hardware group must co-schedule on
+// the PMU or it is never scheduled and reads frozen zeros, so groups are
+// kept to <=4 programmable events: cycles+instructions land on fixed
+// counters on x86, leaving the caches pair two programmable slots, and the
+// branch pair gets its own group.
 #[cfg(target_os = "linux")]
-const HW_EVENTS: &[(&str, Hardware)] = &[
-    ("perf/hw/cpu_cycles",          Hardware::CPU_CYCLES),
-    ("perf/hw/instructions",        Hardware::INSTRUCTIONS),
-    ("perf/hw/cache_references",    Hardware::CACHE_REFERENCES),
-    ("perf/hw/cache_misses",        Hardware::CACHE_MISSES),
-    ("perf/hw/branch_instructions", Hardware::BRANCH_INSTRUCTIONS),
-    ("perf/hw/branch_misses",       Hardware::BRANCH_MISSES),
+const HW_GROUPS: &[&[(&str, Hardware)]] = &[
+    &[
+        ("perf/hw/cpu_cycles",       Hardware::CPU_CYCLES),
+        ("perf/hw/instructions",     Hardware::INSTRUCTIONS),
+        ("perf/hw/cache_references", Hardware::CACHE_REFERENCES),
+        ("perf/hw/cache_misses",     Hardware::CACHE_MISSES),
+    ],
+    &[
+        ("perf/hw/branch_instructions", Hardware::BRANCH_INSTRUCTIONS),
+        ("perf/hw/branch_misses",       Hardware::BRANCH_MISSES),
+    ],
 ];
 
 pub struct HardwareSampler {
     interval: Duration,
     num_cpus: usize,
     #[cfg(target_os = "linux")]
-    counters:    Vec<(MetricId, PerfCounter)>,
+    groups:      Vec<(Vec<MetricId>, PerfGroup)>,
+    #[cfg(target_os = "linux")]
+    scratch:     Vec<u64>,
     #[cfg(target_os = "linux")]
     disabled:    bool,
     #[cfg(target_os = "linux")]
@@ -36,7 +49,9 @@ impl HardwareSampler {
             interval,
             num_cpus,
             #[cfg(target_os = "linux")]
-            counters:    Vec::new(),
+            groups:      Vec::new(),
+            #[cfg(target_os = "linux")]
+            scratch:     Vec::new(),
             #[cfg(target_os = "linux")]
             disabled:    false,
             #[cfg(target_os = "linux")]
@@ -61,14 +76,17 @@ impl HardwareSampler {
     fn try_init(&mut self, reg: &Registry) -> Result<(), PerfError> {
         for cpu in 0..self.num_cpus {
             let cpu_label = format!("cpu{cpu}");
-            for (name, event) in HW_EVENTS {
-                let counter = PerfCounter::open(cpu, *event)?;
-                let id = reg.register(
-                    MetricDef::new(*name, Kind::Counter)
-                        .unit(Unit::Count)
-                        .labels(Labels::new().insert("cpu", &cpu_label)),
-                );
-                self.counters.push((id, counter));
+            for group_events in HW_GROUPS {
+                let events: Vec<Hardware> = group_events.iter().map(|&(_, e)| e).collect();
+                let group = PerfGroup::open(cpu, &events)?;
+                let ids = group_events.iter().map(|(name, _)| {
+                    reg.register(
+                        MetricDef::new(*name, Kind::Counter)
+                            .unit(Unit::Count)
+                            .labels(Labels::new().insert("cpu", &cpu_label)),
+                    )
+                }).collect();
+                self.groups.push((ids, group));
             }
         }
         Ok(())
@@ -98,9 +116,11 @@ impl Sampler for HardwareSampler {
                     return Err(Box::new(e));
                 }
             }
-            for (id, counter) in &mut self.counters {
-                let v = counter.read()?;
-                reg.record_counter(*id, now, v);
+            for (ids, group) in &mut self.groups {
+                group.read_into(&mut self.scratch)?;
+                for (id, &v) in ids.iter().zip(&self.scratch) {
+                    reg.record_counter(*id, now, v);
+                }
             }
         }
         Ok(())

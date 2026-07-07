@@ -31,6 +31,11 @@ sw_enabled = true
 # Perf counter reads are one syscall each (11 events x 224 CPUs per tick);
 # at the global 10ms tick that is ~250k syscalls/s (~2.6 cores measured).
 # 50ms keeps sub-slice-width resolution at a fifth of the cost.
+# Full INET_DIAG socket-table dump per tick — 50ms is plenty for per-flow
+# RTT gauges and cuts the dump rate 5x.
+[samplers.tcpinfo]
+interval = "50ms"
+
 [samplers.perf_hardware]
 interval = "50ms"
 

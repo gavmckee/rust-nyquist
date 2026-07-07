@@ -10,7 +10,7 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-perf-event = { workspace = true }
+perf-event2 = { workspace = true }
 libc = { workspace = true }
 
 [dev-dependencies]
