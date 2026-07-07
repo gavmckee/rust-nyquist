@@ -22,7 +22,10 @@ struct {
     __type(value, u64);
 } start SEC(".maps");
 
-// In-kernel H2 histogram of RTT (ns). BPF_F_MMAPABLE: userspace reads via mmap.
+// In-kernel H2 histogram of RTT in MICROSECONDS (the metric is tcp/rtt_us;
+// bucketing raw ktime ns here made every bucket bound 1000x the implied
+// unit and saturated the top of the histogram range on LAN RTTs).
+// BPF_F_MMAPABLE: userspace reads via mmap.
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(map_flags, BPF_F_MMAPABLE);
@@ -49,7 +52,8 @@ static int handle_rcv_space_adjust(struct sock *sk) {
     if (!tsp) return 0;
     u64 now = bpf_ktime_get_ns();
     if (*tsp <= now) {
-        histogram_incr(&latency, HISTOGRAM_POWER, now - *tsp);
+        // ns -> us before bucketing; see histogram map comment.
+        histogram_incr(&latency, HISTOGRAM_POWER, (now - *tsp) / 1000);
     }
     bpf_map_delete_elem(&start, &id);
     return 0;
