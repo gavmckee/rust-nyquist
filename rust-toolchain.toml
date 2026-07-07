@@ -3,3 +3,5 @@
 # Bump deliberately; "stable" is a moving target that made builds
 # irreproducible across weeks.
 channel = "1.96.0"
+# CI runners install with the minimal profile; clippy must be explicit.
+components = ["clippy"]
