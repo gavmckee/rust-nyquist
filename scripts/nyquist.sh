@@ -123,7 +123,7 @@ cmd_stop() {
     local i=0
     while kill -0 "$pid" 2>/dev/null && [[ $i -lt 10 ]]; do
         sleep 1
-        ((i++))
+        i=$((i + 1))   # not ((i++)): status 1 at i=0 kills the script under set -e
     done
 
     if kill -0 "$pid" 2>/dev/null; then

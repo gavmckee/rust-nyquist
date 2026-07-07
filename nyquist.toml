@@ -12,10 +12,15 @@ push_interval = "10s"
 [clickhouse]
 enabled = true
 url = "http://localhost:18123"
-database = "nyquist"
+# Match the docker/docker-compose.yml stack (and where Grafana + the MCP
+# server look): db nyquist_live, password from CLICKHOUSE_PASSWORD.
+database = "nyquist_live"
 username = "default"
-password = ""
+password = "nyquist"
 insert_interval = "10s"
+
+[syswatch]
+enabled = true
 
 [perf]
 enabled = true
@@ -33,8 +38,12 @@ enabled = true
 [samplers."cpu/vtime"]
 enabled = true
 
+# procfs network stays ENABLED: the eBPF network/traffic sampler deliberately
+# does not count bytes (GRO batching aliased them past line rate), so procfs
+# is the only source of network_receive/transmit_bytes — which dashboards and
+# the MCP query_bandwidth tool depend on.
 [samplers.network]
-enabled = false
+enabled = true
 
 [samplers."network/traffic"]
 enabled = true
