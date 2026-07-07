@@ -106,17 +106,8 @@ impl NicStatsSampler {
         }
 
         // ── RSS coefficient of variation (from rx_packets deltas) ─────────────
-        let mut deltas: Vec<f64> = Vec::new();
-        for &(q, idx) in &st.rx_packet_idxs {
-            if let Some(&cur) = self.values.get(idx) {
-                let prev = st.queue_prev.get(&q).copied().unwrap_or(cur);
-                let delta = cur.saturating_sub(prev) as f64;
-                st.queue_prev.insert(q, cur);
-                if delta > 0.0 { deltas.push(delta); }
-            }
-        }
-        if !deltas.is_empty() {
-            let cv = coefficient_of_variation(&deltas);
+        let deltas = queue_deltas(&st.rx_packet_idxs, &self.values, &mut st.queue_prev);
+        if let Some(cv) = coefficient_of_variation(&deltas) {
             reg.record_gauge(st.rss_cv_id, now, (cv * 100.0) as u64);
         }
 
@@ -252,12 +243,36 @@ fn parse_queue_stat(name: &str, prefix: &str, suffix: &str) -> Option<u32> {
     None
 }
 
-fn coefficient_of_variation(vals: &[f64]) -> f64 {
-    if vals.len() < 2 { return 0.0; }
+/// Per-queue rx_packets deltas for this tick. A delta of ZERO from a known
+/// baseline is real data — a starved queue — and must be included: excluding
+/// idle queues made rss_cv read LOW precisely when one queue received
+/// nothing (the pathology the metric exists to catch). Only queues seen for
+/// the first time (no baseline yet) are skipped.
+fn queue_deltas(
+    rx_packet_idxs: &[(u32, usize)],
+    values: &[u64],
+    queue_prev: &mut HashMap<u32, u64>,
+) -> Vec<f64> {
+    let mut deltas = Vec::with_capacity(rx_packet_idxs.len());
+    for &(q, idx) in rx_packet_idxs {
+        if let Some(&cur) = values.get(idx) {
+            if let Some(prev) = queue_prev.insert(q, cur) {
+                deltas.push(cur.saturating_sub(prev) as f64);
+            }
+        }
+    }
+    deltas
+}
+
+/// None when a CV would be meaningless: fewer than two queues, or below
+/// ~1 packet/queue/tick where idle queues are coupon-collector noise, not
+/// imbalance (the old code returned a misleading 0.0 there).
+fn coefficient_of_variation(vals: &[f64]) -> Option<f64> {
+    if vals.len() < 2 { return None; }
     let mean = vals.iter().sum::<f64>() / vals.len() as f64;
-    if mean < 1.0 { return 0.0; }
+    if mean < 1.0 { return None; }
     let var = vals.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / vals.len() as f64;
-    var.sqrt() / mean
+    Some(var.sqrt() / mean)
 }
 
 fn sanitize(name: &str) -> String {
@@ -287,6 +302,32 @@ mod tests {
         assert_eq!(parse_queue_stat("tx0_dropped", "tx", "dropped"), Some(0));
         assert_eq!(parse_queue_stat("rx_packets", "rx", "packets"), None);
         assert_eq!(parse_queue_stat("rx3_bytes", "rx", "packets"), None);
+    }
+
+    #[test]
+    fn starved_queue_raises_cv_instead_of_vanishing() {
+        let idxs = vec![(0u32, 0usize), (1, 1), (2, 2), (3, 3)];
+        let mut prev = HashMap::new();
+        // First tick: baselines only, no deltas.
+        assert!(queue_deltas(&idxs, &[100, 100, 100, 100], &mut prev).is_empty());
+        // Second tick: queues 0-2 receive 100 packets each; queue 3 is STARVED.
+        let deltas = queue_deltas(&idxs, &[200, 200, 200, 100], &mut prev);
+        assert_eq!(deltas, vec![100.0, 100.0, 100.0, 0.0]);
+        let cv = coefficient_of_variation(&deltas).unwrap();
+        // Old behavior dropped the zero and reported CV = 0 (perfect balance).
+        assert!(cv > 0.5, "starved queue must raise CV, got {cv}");
+        // Balanced traffic still reads ~0.
+        let balanced = coefficient_of_variation(&[100.0, 100.0, 100.0, 100.0]).unwrap();
+        assert!(balanced < 0.01);
+    }
+
+    #[test]
+    fn cv_is_withheld_when_meaningless() {
+        // Below ~1 pkt/queue/tick: coupon-collector noise, not imbalance.
+        assert!(coefficient_of_variation(&[0.0, 0.0, 1.0, 0.0]).is_none());
+        // Single queue: no distribution to speak of.
+        assert!(coefficient_of_variation(&[500.0]).is_none());
+        assert!(coefficient_of_variation(&[]).is_none());
     }
 
     #[test]
