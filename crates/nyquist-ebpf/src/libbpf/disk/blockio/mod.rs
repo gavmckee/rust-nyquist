@@ -172,8 +172,8 @@ impl Sampler for BlockIo {
                 let rbase = slot * 2 * BPF_BUCKETS;
                 let read_counts  = &lat_slice[rbase..rbase + BPF_BUCKETS];
                 let write_counts = &lat_slice[rbase + BPF_BUCKETS..rbase + 2 * BPF_BUCKETS];
-                reg.record_distribution_buckets(ids.read_latency,  buckets_from_counts(read_counts));
-                reg.record_distribution_buckets(ids.write_latency, buckets_from_counts(write_counts));
+                reg.record_distribution_buckets(ids.read_latency,  now, buckets_from_counts(read_counts));
+                reg.record_distribution_buckets(ids.write_latency, now, buckets_from_counts(write_counts));
             }
         }
         Ok(())

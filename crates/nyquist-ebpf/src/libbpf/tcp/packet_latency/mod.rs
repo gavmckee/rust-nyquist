@@ -83,7 +83,7 @@ impl PacketLatency {
 impl Sampler for PacketLatency {
     fn name(&self) -> &str { NAME }
     fn interval(&self) -> Duration { self.interval }
-    async fn sample(&mut self, reg: &Registry, _now: Instant) -> Result<(), SamplerError> {
+    async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
         match &self.state {
             State::Disabled => return Ok(()),
             State::Uninit => {
@@ -98,7 +98,7 @@ impl Sampler for PacketLatency {
         }
         let counts = self.read_counts();
         if let Some(id) = self.metric_id {
-            reg.record_distribution_buckets(id, buckets_from_counts(&counts));
+            reg.record_distribution_buckets(id, now, buckets_from_counts(&counts));
         }
         Ok(())
     }

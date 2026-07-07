@@ -22,13 +22,26 @@ impl MetricDef {
     pub fn labels(mut self, l: Labels) -> Self { self.labels = l; self }
 }
 
+/// BPF path: externally-aggregated CUMULATIVE bucket arrays. The kernel
+/// histograms only ever grow, so exposing them as-is made every percentile
+/// a since-agent-start figure — a 10-second latency excursion after a day
+/// of uptime was statistically invisible. Snapshots instead emit
+/// `latest - checkpoint(~window ago)`, giving the same trailing-window
+/// semantics as every other metric.
+struct DirectBuckets {
+    latest: Vec<(u64, u64)>,
+    last_update: Instant,
+    /// (time, cumulative counts) checkpoints, oldest first; one every
+    /// window/8, retained just past the window so a baseline always exists.
+    checkpoints: std::collections::VecDeque<(Instant, Vec<(u64, u64)>)>,
+}
+
 struct MetricState {
     def: MetricDef,
     window: SlidingHistogram,
     raw: u64,
     prev: Option<(Instant, u64)>,
-    /// BPF path: externally-aggregated bucket array bypasses the windowing engine.
-    direct_buckets: Option<Vec<(u64, u64)>>,
+    direct: Option<DirectBuckets>,
 }
 
 pub struct Registry {
@@ -64,7 +77,7 @@ impl Registry {
                     window: SlidingHistogram::with_capacity(self.slice_width, self.window, self.samples_per_slice),
                     raw: 0,
                     prev: None,
-                    direct_buckets: None,
+                    direct: None,
                 })
             });
         }
@@ -126,22 +139,62 @@ impl Registry {
         self.metrics.iter().map(|e| *e.key()).collect()
     }
 
-    /// Store an externally-aggregated H2 bucket array directly (BPF path, design §3.4).
-    /// Bypasses the windowing engine — these buckets come from the kernel and are exposed as-is.
-    pub fn record_distribution_buckets(&self, id: MetricId, buckets: Vec<(u64, u64)>) {
+    /// Store an externally-aggregated CUMULATIVE H2 bucket array (BPF path,
+    /// design §3.4). Callers pass the kernel histogram as-is each tick;
+    /// windowing happens at snapshot time (see `DirectBuckets`).
+    pub fn record_distribution_buckets(&self, id: MetricId, now: Instant, buckets: Vec<(u64, u64)>) {
+        let checkpoint_every = self.window / 8;
         if let Some(state) = self.metrics.get(&id) {
             let mut s = state.lock().unwrap();
             s.raw = buckets.iter().map(|&(_, c)| c).sum();
-            s.direct_buckets = Some(buckets);
+            let d = s.direct.get_or_insert_with(|| DirectBuckets {
+                latest: Vec::new(),
+                last_update: now,
+                checkpoints: std::collections::VecDeque::new(),
+            });
+            let due = match d.checkpoints.back() {
+                None => true,
+                Some((t, _)) => now.saturating_duration_since(*t) >= checkpoint_every,
+            };
+            if due {
+                d.checkpoints.push_back((now, buckets.clone()));
+            }
+            // Retain one checkpoint beyond the window so a baseline at
+            // (now - window) always exists once the ring has filled.
+            while d.checkpoints.len() > 1 {
+                let second_age = now.saturating_duration_since(d.checkpoints[1].0);
+                if second_age > self.window { d.checkpoints.pop_front(); } else { break; }
+            }
+            d.latest = buckets;
+            d.last_update = now;
         }
     }
 
-    pub fn snapshot(&self, now: std::time::Instant) -> crate::snapshot::RegistrySnapshot {
+    pub fn snapshot(&self, now: Instant) -> crate::snapshot::RegistrySnapshot {
+        // A direct-bucket metric whose sampler stopped feeding it (BPF error,
+        // ring death) must not keep exporting its last histogram as if live.
+        let stale_after = self.slice_width * 10;
         let mut metrics = Vec::new();
         for entry in self.metrics.iter() {
             let mut s = entry.value().lock().unwrap();
-            let buckets = match &s.direct_buckets {
-                Some(b) => b.clone(),
+            let buckets = match &s.direct {
+                Some(d) => {
+                    if now.saturating_duration_since(d.last_update) > stale_after {
+                        Vec::new()
+                    } else {
+                        // Baseline: newest checkpoint at least a full window old;
+                        // until the ring covers the window (agent just started),
+                        // fall back to the full cumulative counts — matching how
+                        // the sliding window behaves before it first fills.
+                        let baseline = d.checkpoints.iter().rev().find(|(t, _)| {
+                            now.saturating_duration_since(*t) >= self.window
+                        });
+                        match baseline {
+                            Some((_, base)) => subtract_cumulative_buckets(&d.latest, base),
+                            None => d.latest.clone(),
+                        }
+                    }
+                }
                 None => s.window.bucket_counts(now),
             };
             metrics.push(crate::snapshot::MetricSnapshot {
@@ -155,6 +208,25 @@ impl Registry {
         }
         crate::snapshot::RegistrySnapshot { metrics, captured: std::time::SystemTime::now() }
     }
+}
+
+/// `newer - older` for sparse ascending (upper_bound, cumulative_count)
+/// arrays from the same histogram: bounds only ever get added, and counts
+/// per bound only grow, so a merge-subtract is exact. Saturating handles a
+/// kernel-side reset (sampler reattach) by degrading to zeros for one window.
+fn subtract_cumulative_buckets(
+    newer: &[(u64, u64)],
+    older: &[(u64, u64)],
+) -> Vec<(u64, u64)> {
+    let mut out = Vec::with_capacity(newer.len());
+    let mut oi = 0;
+    for &(bound, count) in newer {
+        while oi < older.len() && older[oi].0 < bound { oi += 1; }
+        let base = if oi < older.len() && older[oi].0 == bound { older[oi].1 } else { 0 };
+        let delta = count.saturating_sub(base);
+        if delta > 0 { out.push((bound, delta)); }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -242,11 +314,58 @@ mod tests {
     fn direct_buckets_appear_in_snapshot() {
         let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
         let id = reg.register(MetricDef::new("tcp/packet_latency", Kind::Distribution));
-        reg.record_distribution_buckets(id, vec![(100, 5), (1000, 2)]);
-        let snap = reg.snapshot(Instant::now());
+        let t0 = Instant::now();
+        reg.record_distribution_buckets(id, t0, vec![(100, 5), (1000, 2)]);
+        let snap = reg.snapshot(t0);
         let m = snap.metrics.iter().find(|m| m.name == "tcp/packet_latency").unwrap();
         assert_eq!(m.buckets, vec![(100, 5), (1000, 2)]);
         assert_eq!(m.raw, 7);
+    }
+
+    #[test]
+    fn direct_buckets_are_windowed_not_cumulative() {
+        // Cumulative kernel counts recorded over 2 minutes; a snapshot must
+        // reflect only the last window (60s), not since-agent-start.
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(60));
+        let id = reg.register(MetricDef::new("disk/read/latency", Kind::Distribution));
+        let t0 = Instant::now();
+        // 10 events per 10s tick land in bucket 100; one early burst of 1000
+        // events in bucket 5000 happens before the window and must vanish.
+        reg.record_distribution_buckets(id, t0, vec![(100, 10), (5000, 1000)]);
+        for i in 1..=12u64 {
+            let t = t0 + Duration::from_secs(i * 10);
+            reg.record_distribution_buckets(id, t, vec![(100, 10 + i * 10), (5000, 1000)]);
+        }
+        let now = t0 + Duration::from_secs(120);
+        let snap = reg.snapshot(now);
+        let m = &snap.metrics[0];
+        // The burst bucket contributes nothing inside the window...
+        assert!(
+            !m.buckets.iter().any(|&(b, _)| b == 5000),
+            "pre-window burst leaked into windowed buckets: {:?}", m.buckets
+        );
+        // ...while the steady bucket shows roughly one window's worth
+        // (60s / 10s * 10 events, +- one checkpoint of slack).
+        let steady = m.buckets.iter().find(|&&(b, _)| b == 100).map(|&(_, c)| c).unwrap_or(0);
+        assert!(
+            (50..=80).contains(&steady),
+            "windowed count should be ~60, got {steady}"
+        );
+        // raw stays cumulative (total events ever).
+        assert_eq!(m.raw, 130 + 1000);
+    }
+
+    #[test]
+    fn stale_direct_buckets_read_empty() {
+        // A dead BPF sampler must not keep exporting its last histogram.
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(60));
+        let id = reg.register(MetricDef::new("tcp/packet_latency", Kind::Distribution));
+        let t0 = Instant::now();
+        reg.record_distribution_buckets(id, t0, vec![(100, 5)]);
+        // Within 10 slice-widths: live.
+        assert!(!reg.snapshot(t0 + Duration::from_millis(500)).metrics[0].buckets.is_empty());
+        // Beyond: stale, empty.
+        assert!(reg.snapshot(t0 + Duration::from_secs(2)).metrics[0].buckets.is_empty());
     }
 
     #[test]
