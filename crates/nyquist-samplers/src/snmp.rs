@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use nyquist_core::model::{Kind, Unit};
+use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
 use crate::procfs::{parse_net_snmp, parse_net_snmp6};
@@ -85,12 +86,29 @@ const UDP_METRICS: [(&str, &str); 6] = [
     ("udp/sndbuf_errors",  "SndbufErrors"),
 ];
 
-fn ingest(reg: &Registry, now: Instant, text: &str, proto: &str, metrics: &[(&str, &str)]) {
-    let parsed = parse_net_snmp(text);
+// Cache lookup: register only on first sight of a metric name so
+// steady-state ticks do zero MetricDef allocations.
+fn cached_id(
+    reg: &Registry,
+    ids: &mut HashMap<&'static str, MetricId>,
+    name: &'static str,
+) -> MetricId {
+    *ids.entry(name)
+        .or_insert_with(|| reg.register(MetricDef::new(name, Kind::Counter).unit(Unit::Count)))
+}
+
+fn ingest_parsed(
+    reg: &Registry,
+    now: Instant,
+    parsed: &HashMap<String, HashMap<String, u64>>,
+    proto: &str,
+    metrics: &[(&'static str, &'static str)],
+    ids: &mut HashMap<&'static str, MetricId>,
+) {
     let Some(fields) = parsed.get(proto) else { return };
     for (name, snmp_field) in metrics {
         if let Some(&value) = fields.get(*snmp_field) {
-            let id = reg.register(MetricDef::new(*name, Kind::Counter).unit(Unit::Count));
+            let id = cached_id(reg, ids, name);
             reg.record_counter(id, now, value);
         }
     }
@@ -99,20 +117,23 @@ fn ingest(reg: &Registry, now: Instant, text: &str, proto: &str, metrics: &[(&st
 fn record_snmp6(
     reg: &Registry,
     now: Instant,
-    fields: &std::collections::HashMap<String, u64>,
-    metrics: &[(&str, &str)],
+    fields: &HashMap<String, u64>,
+    metrics: &[(&'static str, &'static str)],
+    ids: &mut HashMap<&'static str, MetricId>,
 ) {
     for (name, snmp6_field) in metrics {
         if let Some(&value) = fields.get(*snmp6_field) {
-            let id = reg.register(MetricDef::new(*name, Kind::Counter).unit(Unit::Count));
+            let id = cached_id(reg, ids, name);
             reg.record_counter(id, now, value);
         }
     }
 }
 
-pub struct IpSampler { interval: Duration }
+pub struct IpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
 impl IpSampler {
-    pub fn new(_reg: &Registry, interval: Duration) -> Self { IpSampler { interval } }
+    pub fn new(_reg: &Registry, interval: Duration) -> Self {
+        IpSampler { interval, ids: HashMap::new() }
+    }
 }
 #[async_trait::async_trait]
 impl Sampler for IpSampler {
@@ -120,21 +141,24 @@ impl Sampler for IpSampler {
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
         let text = std::fs::read_to_string(SNMP_PATH)?;
-        ingest(reg, now, &text, "Ip",   IP_METRICS);
-        ingest(reg, now, &text, "Icmp", ICMP_METRICS);
+        let parsed = parse_net_snmp(&text);
+        ingest_parsed(reg, now, &parsed, "Ip",   IP_METRICS,   &mut self.ids);
+        ingest_parsed(reg, now, &parsed, "Icmp", ICMP_METRICS, &mut self.ids);
         // snmp6 is absent when IPv6 is disabled — skip silently, don't error.
         if let Ok(text6) = std::fs::read_to_string(SNMP6_PATH) {
             let fields = parse_net_snmp6(&text6);
-            record_snmp6(reg, now, &fields, IP6_METRICS);
-            record_snmp6(reg, now, &fields, ICMP6_METRICS);
+            record_snmp6(reg, now, &fields, IP6_METRICS,   &mut self.ids);
+            record_snmp6(reg, now, &fields, ICMP6_METRICS, &mut self.ids);
         }
         Ok(())
     }
 }
 
-pub struct TcpSampler { interval: Duration }
+pub struct TcpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
 impl TcpSampler {
-    pub fn new(_reg: &Registry, interval: Duration) -> Self { TcpSampler { interval } }
+    pub fn new(_reg: &Registry, interval: Duration) -> Self {
+        TcpSampler { interval, ids: HashMap::new() }
+    }
 }
 #[async_trait::async_trait]
 impl Sampler for TcpSampler {
@@ -142,14 +166,17 @@ impl Sampler for TcpSampler {
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
         let text = std::fs::read_to_string(SNMP_PATH)?;
-        ingest(reg, now, &text, "Tcp", &TCP_METRICS);
+        let parsed = parse_net_snmp(&text);
+        ingest_parsed(reg, now, &parsed, "Tcp", &TCP_METRICS, &mut self.ids);
         Ok(())
     }
 }
 
-pub struct UdpSampler { interval: Duration }
+pub struct UdpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
 impl UdpSampler {
-    pub fn new(_reg: &Registry, interval: Duration) -> Self { UdpSampler { interval } }
+    pub fn new(_reg: &Registry, interval: Duration) -> Self {
+        UdpSampler { interval, ids: HashMap::new() }
+    }
 }
 #[async_trait::async_trait]
 impl Sampler for UdpSampler {
@@ -157,10 +184,11 @@ impl Sampler for UdpSampler {
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
         let text = std::fs::read_to_string(SNMP_PATH)?;
-        ingest(reg, now, &text, "Udp", &UDP_METRICS);
+        let parsed = parse_net_snmp(&text);
+        ingest_parsed(reg, now, &parsed, "Udp", &UDP_METRICS, &mut self.ids);
         if let Ok(text6) = std::fs::read_to_string(SNMP6_PATH) {
             let fields = parse_net_snmp6(&text6);
-            record_snmp6(reg, now, &fields, UDP6_METRICS);
+            record_snmp6(reg, now, &fields, UDP6_METRICS, &mut self.ids);
         }
         Ok(())
     }
@@ -175,8 +203,13 @@ mod tests {
         let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
         let text = include_str!("../tests/fixtures/proc_net_snmp");
         let now = Instant::now();
-        ingest(&reg, now, text, "Tcp", &TCP_METRICS);
-        ingest(&reg, now, text, "Udp", &UDP_METRICS);
+        let parsed = parse_net_snmp(text);
+        let mut ids = HashMap::new();
+        ingest_parsed(&reg, now, &parsed, "Tcp", &TCP_METRICS, &mut ids);
+        ingest_parsed(&reg, now, &parsed, "Udp", &UDP_METRICS, &mut ids);
+        assert_eq!(reg.metric_ids().len(), 11);
+        // Second tick reuses cached ids — no new registrations.
+        ingest_parsed(&reg, now, &parsed, "Tcp", &TCP_METRICS, &mut ids);
         assert_eq!(reg.metric_ids().len(), 11);
     }
 
@@ -186,9 +219,10 @@ mod tests {
         let text = include_str!("../tests/fixtures/proc_net_snmp6");
         let now = Instant::now();
         let fields = parse_net_snmp6(text);
-        record_snmp6(&reg, now, &fields, IP6_METRICS);
-        record_snmp6(&reg, now, &fields, ICMP6_METRICS);
-        record_snmp6(&reg, now, &fields, UDP6_METRICS);
+        let mut ids = HashMap::new();
+        record_snmp6(&reg, now, &fields, IP6_METRICS,   &mut ids);
+        record_snmp6(&reg, now, &fields, ICMP6_METRICS, &mut ids);
+        record_snmp6(&reg, now, &fields, UDP6_METRICS,  &mut ids);
         // Fixture covers all 20 mapped fields.
         assert_eq!(reg.metric_ids().len(), 20);
         // Spot-check a raw value survives the pipeline (frag failures from fixture).

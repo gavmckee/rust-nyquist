@@ -7,6 +7,8 @@ use crate::procfs::parse_softirqs;
 
 pub struct SoftirqSampler {
     interval: Duration,
+    // keyed by the raw softirq name (e.g. "NET_RX") so steady-state ticks
+    // skip the format!/to_lowercase metric-name build entirely.
     ids: HashMap<String, MetricId>,
 }
 
@@ -15,10 +17,11 @@ impl SoftirqSampler {
         SoftirqSampler { interval, ids: HashMap::new() }
     }
 
-    fn id(&mut self, reg: &Registry, name: &str) -> MetricId {
-        if let Some(&id) = self.ids.get(name) { return id; }
+    fn id(&mut self, reg: &Registry, irq_type: &str) -> MetricId {
+        if let Some(&id) = self.ids.get(irq_type) { return id; }
+        let name = format!("softirq/{}", irq_type.to_lowercase());
         let id = reg.register(MetricDef::new(name, Kind::Counter).unit(Unit::Count));
-        self.ids.insert(name.to_string(), id);
+        self.ids.insert(irq_type.to_string(), id);
         id
     }
 }
@@ -31,8 +34,7 @@ impl Sampler for SoftirqSampler {
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
         let text = std::fs::read_to_string("/proc/softirqs")?;
         for (irq_type, total) in parse_softirqs(&text) {
-            let name = format!("softirq/{}", irq_type.to_lowercase());
-            let id = self.id(reg, &name);
+            let id = self.id(reg, &irq_type);
             reg.record_counter(id, now, total);
         }
         Ok(())
@@ -53,12 +55,11 @@ mod tests {
         let entries = parse_softirqs(text);
         let now = Instant::now();
         for (irq_type, total) in entries {
-            let name = format!("softirq/{}", irq_type.to_lowercase());
-            let id = s.id(&reg, &name);
+            let id = s.id(&reg, &irq_type);
             reg.record_counter(id, now, total);
         }
         // NET_RX: 5000000 + 10000000 = 15000000
-        let net_rx_id = s.id(&reg, "softirq/net_rx");
+        let net_rx_id = s.id(&reg, "NET_RX");
         assert_eq!(reg.raw(net_rx_id), 15_000_000);
     }
 }

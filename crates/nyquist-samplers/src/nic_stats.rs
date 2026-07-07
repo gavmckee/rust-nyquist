@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use nyquist_core::model::{Kind, Labels, Unit};
+use nyquist_core::model::{Kind, Labels, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
+use nyquist_sysconfig::StatsReader;
 
 // Aggregate stats whose names contain these substrings are tracked as counters.
 const KEEP_PATTERNS: &[&str] = &[
@@ -29,92 +30,102 @@ const TX_QUEUE_STAT_SUFFIXES: &[(&str, &str, Unit)] = &[
     ("dropped", "nic/queue/tx_dropped", Unit::Count),
 ];
 
-struct QueueMetric {
-    metric_name: String,
-    unit: Unit,
-    queue: u32,
-    stat_idx: usize,
-}
+// Sysfs statistics files mirrored as counters.
+const SYSFS_STATS: &[(&str, &str)] = &[
+    ("rx_missed_errors", "nic/rx_missed"),
+    ("rx_fifo_errors",   "nic/rx_fifo_errors"),
+    ("rx_frame_errors",  "nic/rx_frame_errors"),
+];
 
+/// Everything registered up front so the per-tick path records by MetricId
+/// with zero MetricDef/Labels/String allocations.
 struct IfaceState {
-    n_stats: usize,
-    drop_stats: Vec<(String, usize)>,   // (metric_name_suffix, stat_idx)
-    queue_metrics: Vec<QueueMetric>,
-    // subset of queue_metrics that are rx_packets, for RSS CV
-    rx_packet_idxs: Vec<(u32, usize)>,  // (queue, stat_idx)
-    queue_prev: HashMap<u32, u64>,
+    n_stats:        usize,
+    drop_stats:     Vec<(MetricId, usize)>,      // (id, stat_idx)
+    queue_metrics:  Vec<(MetricId, usize)>,      // (id, stat_idx)
+    rx_packet_idxs: Vec<(u32, usize)>,           // (queue, stat_idx) for RSS CV
+    queue_prev:     HashMap<u32, u64>,
+    rss_cv_id:      MetricId,
+    sysfs:          Vec<(String, MetricId)>,     // (path, id)
 }
 
 pub struct NicStatsSampler {
     interval: Duration,
+    // One socket + scratch buffer for the process lifetime. None if the
+    // socket can't be opened (non-Linux, exotic sandbox) — sampler idles.
+    reader: Option<StatsReader>,
+    // Reused values buffer: ~7k u64 per mlx5 port, refilled in place.
+    values: Vec<u64>,
+    ifaces: Vec<String>,
+    ifaces_refreshed: Option<Instant>,
     state: HashMap<String, IfaceState>,
 }
 
+const IFACE_LIST_REFRESH: Duration = Duration::from_secs(60);
+
 impl NicStatsSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        NicStatsSampler { interval, state: HashMap::new() }
+        NicStatsSampler {
+            interval,
+            reader: StatsReader::new().ok(),
+            values: Vec::new(),
+            ifaces: Vec::new(),
+            ifaces_refreshed: None,
+            state: HashMap::new(),
+        }
     }
 
     fn sample_iface(&mut self, reg: &Registry, now: Instant, iface: &str) {
-        let stats = nyquist_sysconfig::get_driver_stats(iface);
-        if stats.is_empty() { return; }
+        let Some(reader) = self.reader.as_mut() else { return };
+        let got = reader.stat_values(iface, &mut self.values);
+        if got == 0 { return; }
 
-        if self.state.get(iface).map(|s| s.n_stats) != Some(stats.len()) {
-            self.state.insert(iface.to_string(), build_state(&stats));
+        if self.state.get(iface).map(|s| s.n_stats) != Some(got) {
+            // Count changed (queue reconfig) or first sight: rebuild the
+            // name→metric mapping. Skip recording this tick so values are
+            // never paired against names from a different stat layout.
+            let names = reader.stat_names(iface);
+            if names.is_empty() { return; }
+            self.state.insert(iface.to_string(), build_state(reg, iface, &names));
+            return;
         }
         let st = self.state.get_mut(iface).unwrap();
 
         // ── aggregate drop/miss/error counters ────────────────────────────────
-        for (name, idx) in &st.drop_stats {
-            if let Some((_, val)) = stats.get(*idx) {
-                let id = reg.register(
-                    MetricDef::new(name, Kind::Counter)
-                        .unit(Unit::Count)
-                        .labels(Labels::new().insert("iface", iface)),
-                );
-                reg.record_counter(id, now, *val);
+        for &(id, idx) in &st.drop_stats {
+            if let Some(&val) = self.values.get(idx) {
+                reg.record_counter(id, now, val);
             }
         }
 
         // ── per-queue metrics ─────────────────────────────────────────────────
-        for qm in &st.queue_metrics {
-            if let Some((_, val)) = stats.get(qm.stat_idx) {
-                let q_str = qm.queue.to_string();
-                let id = reg.register(
-                    MetricDef::new(&qm.metric_name, Kind::Counter)
-                        .unit(qm.unit)
-                        .labels(Labels::new()
-                            .insert("iface", iface)
-                            .insert("queue", &q_str)),
-                );
-                reg.record_counter(id, now, *val);
+        for &(id, idx) in &st.queue_metrics {
+            if let Some(&val) = self.values.get(idx) {
+                reg.record_counter(id, now, val);
             }
         }
 
         // ── RSS coefficient of variation (from rx_packets deltas) ─────────────
         let mut deltas: Vec<f64> = Vec::new();
         for &(q, idx) in &st.rx_packet_idxs {
-            if let Some((_, cur)) = stats.get(idx) {
-                let prev = st.queue_prev.get(&q).copied().unwrap_or(*cur);
+            if let Some(&cur) = self.values.get(idx) {
+                let prev = st.queue_prev.get(&q).copied().unwrap_or(cur);
                 let delta = cur.saturating_sub(prev) as f64;
-                st.queue_prev.insert(q, *cur);
+                st.queue_prev.insert(q, cur);
                 if delta > 0.0 { deltas.push(delta); }
             }
         }
         if !deltas.is_empty() {
             let cv = coefficient_of_variation(&deltas);
-            let id = reg.register(
-                MetricDef::new("nic/rss_cv", Kind::Gauge)
-                    .unit(Unit::Percent)
-                    .labels(Labels::new().insert("iface", iface)),
-            );
-            reg.record_gauge(id, now, (cv * 100.0) as u64);
+            reg.record_gauge(st.rss_cv_id, now, (cv * 100.0) as u64);
         }
 
         // ── sysfs counters ────────────────────────────────────────────────────
-        record_sysfs(reg, now, iface, "rx_missed_errors", "nic/rx_missed");
-        record_sysfs(reg, now, iface, "rx_fifo_errors",   "nic/rx_fifo_errors");
-        record_sysfs(reg, now, iface, "rx_frame_errors",  "nic/rx_frame_errors");
+        for (path, id) in &st.sysfs {
+            let Ok(s) = std::fs::read_to_string(path) else { continue };
+            let Ok(v) = s.trim().parse::<u64>() else { continue };
+            reg.record_counter(*id, now, v);
+        }
     }
 }
 
@@ -124,19 +135,28 @@ impl Sampler for NicStatsSampler {
     fn interval(&self) -> Duration { self.interval }
 
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        for iface in list_physical_ifaces() {
-            self.sample_iface(reg, now, &iface);
+        if self.reader.is_none() { return Ok(()); }
+        if self.ifaces_refreshed
+            .is_none_or(|t| now.saturating_duration_since(t) >= IFACE_LIST_REFRESH)
+        {
+            self.ifaces = list_physical_ifaces();
+            self.ifaces_refreshed = Some(now);
         }
+        let ifaces = std::mem::take(&mut self.ifaces);
+        for iface in &ifaces {
+            self.sample_iface(reg, now, iface);
+        }
+        self.ifaces = ifaces;
         Ok(())
     }
 }
 
-fn build_state(stats: &[(String, u64)]) -> IfaceState {
+fn build_state(reg: &Registry, iface: &str, names: &[String]) -> IfaceState {
     let mut drop_stats = Vec::new();
-    let mut queue_metrics: Vec<QueueMetric> = Vec::new();
+    let mut queue_metrics = Vec::new();
     let mut rx_packet_idxs = Vec::new();
 
-    for (idx, (name, _)) in stats.iter().enumerate() {
+    for (idx, name) in names.iter().enumerate() {
         // Per-queue RX stats
         let mut matched_queue = false;
         for &(suffix, metric, unit) in QUEUE_STAT_SUFFIXES {
@@ -144,12 +164,14 @@ fn build_state(stats: &[(String, u64)]) -> IfaceState {
                 if suffix == "packets" {
                     rx_packet_idxs.push((q, idx));
                 }
-                queue_metrics.push(QueueMetric {
-                    metric_name: metric.to_string(),
-                    unit,
-                    queue: q,
-                    stat_idx: idx,
-                });
+                let id = reg.register(
+                    MetricDef::new(metric, Kind::Counter)
+                        .unit(unit)
+                        .labels(Labels::new()
+                            .insert("iface", iface)
+                            .insert("queue", q.to_string())),
+                );
+                queue_metrics.push((id, idx));
                 matched_queue = true;
                 break;
             }
@@ -160,12 +182,14 @@ fn build_state(stats: &[(String, u64)]) -> IfaceState {
         let mut matched_tx = false;
         for &(suffix, metric, unit) in TX_QUEUE_STAT_SUFFIXES {
             if let Some(q) = parse_queue_stat(name, "tx", suffix) {
-                queue_metrics.push(QueueMetric {
-                    metric_name: metric.to_string(),
-                    unit,
-                    queue: q,
-                    stat_idx: idx,
-                });
+                let id = reg.register(
+                    MetricDef::new(metric, Kind::Counter)
+                        .unit(unit)
+                        .labels(Labels::new()
+                            .insert("iface", iface)
+                            .insert("queue", q.to_string())),
+                );
+                queue_metrics.push((id, idx));
                 matched_tx = true;
                 break;
             }
@@ -174,17 +198,38 @@ fn build_state(stats: &[(String, u64)]) -> IfaceState {
 
         // Aggregate drop/miss stats
         if KEEP_PATTERNS.iter().any(|p| name.contains(p)) {
-            let metric_name = format!("nic/driver/{}", sanitize(name));
-            drop_stats.push((metric_name, idx));
+            let id = reg.register(
+                MetricDef::new(format!("nic/driver/{}", sanitize(name)), Kind::Counter)
+                    .unit(Unit::Count)
+                    .labels(Labels::new().insert("iface", iface)),
+            );
+            drop_stats.push((id, idx));
         }
     }
 
+    let rss_cv_id = reg.register(
+        MetricDef::new("nic/rss_cv", Kind::Gauge)
+            .unit(Unit::Percent)
+            .labels(Labels::new().insert("iface", iface)),
+    );
+
+    let sysfs = SYSFS_STATS.iter().map(|(file, metric)| {
+        let id = reg.register(
+            MetricDef::new(*metric, Kind::Counter)
+                .unit(Unit::Count)
+                .labels(Labels::new().insert("iface", iface)),
+        );
+        (format!("/sys/class/net/{iface}/statistics/{file}"), id)
+    }).collect();
+
     IfaceState {
-        n_stats: stats.len(),
+        n_stats: names.len(),
         drop_stats,
         queue_metrics,
         rx_packet_idxs,
         queue_prev: HashMap::new(),
+        rss_cv_id,
+        sysfs,
     }
 }
 
@@ -215,18 +260,6 @@ fn coefficient_of_variation(vals: &[f64]) -> f64 {
     var.sqrt() / mean
 }
 
-fn record_sysfs(reg: &Registry, now: Instant, iface: &str, file: &str, metric: &str) {
-    let path = format!("/sys/class/net/{iface}/statistics/{file}");
-    let Ok(s) = std::fs::read_to_string(&path) else { return };
-    let Ok(v) = s.trim().parse::<u64>() else { return };
-    let id = reg.register(
-        MetricDef::new(metric, Kind::Counter)
-            .unit(Unit::Count)
-            .labels(Labels::new().insert("iface", iface)),
-    );
-    reg.record_counter(id, now, v);
-}
-
 fn sanitize(name: &str) -> String {
     name.replace(|c: char| !c.is_alphanumeric() && c != '_', "_")
 }
@@ -241,6 +274,39 @@ fn list_physical_ifaces() -> Vec<String> {
             Some(name)
         }).collect())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn queue_stat_name_parsing() {
+        assert_eq!(parse_queue_stat("rx3_packets", "rx", "packets"), Some(3));
+        assert_eq!(parse_queue_stat("rx_queue_12_bytes", "rx", "bytes"), Some(12));
+        assert_eq!(parse_queue_stat("tx0_dropped", "tx", "dropped"), Some(0));
+        assert_eq!(parse_queue_stat("rx_packets", "rx", "packets"), None);
+        assert_eq!(parse_queue_stat("rx3_bytes", "rx", "packets"), None);
+    }
+
+    #[test]
+    fn build_state_registers_ids_once() {
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
+        let names: Vec<String> = vec![
+            "rx0_packets".into(),
+            "rx0_bytes".into(),
+            "tx0_bytes".into(),
+            "rx_out_of_buffer".into(),
+            "irrelevant_stat".into(),
+        ];
+        let st = build_state(&reg, "eth0", &names);
+        assert_eq!(st.n_stats, 5);
+        assert_eq!(st.queue_metrics.len(), 3);
+        assert_eq!(st.drop_stats.len(), 1);
+        assert_eq!(st.rx_packet_idxs, vec![(0, 0)]);
+        // queue metrics (3) + drop (1) + rss_cv + 3 sysfs = 8 registered ids
+        assert_eq!(reg.metric_ids().len(), 8);
+    }
 }
 
 #[linkme::distributed_slice(nyquist_core::registration::SAMPLERS)]

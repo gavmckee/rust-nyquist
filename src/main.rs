@@ -66,7 +66,13 @@ async fn main() -> anyhow::Result<()> {
         hw_enabled: config.perf.hw_enabled,
         sw_enabled: config.perf.sw_enabled,
     };
-    for s in build_perf_enabled(&reg, config.general.default_interval, &perf_cfg) {
+    let perf_iv_cfg = config.clone();
+    for s in build_perf_enabled(
+        &reg,
+        config.general.default_interval,
+        &perf_cfg,
+        |name| perf_iv_cfg.sampler(name).interval,
+    ) {
         sampler_handles.push(spawn_sampler(s, reg.clone(), config.general.fault_tolerant));
     }
 

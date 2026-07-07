@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use nyquist_core::model::{Kind, Unit};
+use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
 use crate::procfs::parse_net_snmp;
@@ -40,10 +41,16 @@ const TCPEXT_METRICS: &[(&str, &str)] = &[
     ("tcp/mem_pressure/events",  "TCPMemoryPressures"),
 ];
 
-pub struct NetstatSampler { interval: Duration }
+pub struct NetstatSampler {
+    interval: Duration,
+    // metric name -> id: register only on first sight, zero allocations after.
+    ids: HashMap<&'static str, MetricId>,
+}
 
 impl NetstatSampler {
-    pub fn new(_reg: &Registry, interval: Duration) -> Self { NetstatSampler { interval } }
+    pub fn new(_reg: &Registry, interval: Duration) -> Self {
+        NetstatSampler { interval, ids: HashMap::new() }
+    }
 }
 
 #[async_trait::async_trait]
@@ -57,7 +64,9 @@ impl Sampler for NetstatSampler {
         let Some(fields) = parsed.get("TcpExt") else { return Ok(()) };
         for (name, snmp_field) in TCPEXT_METRICS {
             if let Some(&value) = fields.get(*snmp_field) {
-                let id = reg.register(MetricDef::new(*name, Kind::Counter).unit(Unit::Count));
+                let id = *self.ids.entry(*name).or_insert_with(|| {
+                    reg.register(MetricDef::new(*name, Kind::Counter).unit(Unit::Count))
+                });
                 reg.record_counter(id, now, value);
             }
         }

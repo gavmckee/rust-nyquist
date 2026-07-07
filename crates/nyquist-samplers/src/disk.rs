@@ -1,25 +1,38 @@
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use nyquist_core::model::{Kind, Labels, Unit};
+use nyquist_core::model::{Kind, Labels, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
 use crate::procfs::parse_diskstats;
 
 const SECTOR_BYTES: u64 = 512;
 
-pub struct DiskSampler { interval: Duration, path: String }
+pub struct DiskSampler {
+    interval: Duration,
+    path: String,
+    // device -> (read_id, write_id): registered on first sight of a device.
+    ids: HashMap<String, (MetricId, MetricId)>,
+}
 
 impl DiskSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        DiskSampler { interval, path: "/proc/diskstats".to_string() }
+        DiskSampler { interval, path: "/proc/diskstats".to_string(), ids: HashMap::new() }
     }
-    fn ingest(&self, reg: &Registry, now: Instant, text: &str) {
+    fn ingest(&mut self, reg: &Registry, now: Instant, text: &str) {
         for (device, sread, swritten) in parse_diskstats(text) {
-            let r = reg.register(
-                MetricDef::new("disk/read/bytes", Kind::Counter)
-                    .unit(Unit::Bytes).labels(Labels::new().insert("device", &device)));
-            let w = reg.register(
-                MetricDef::new("disk/write/bytes", Kind::Counter)
-                    .unit(Unit::Bytes).labels(Labels::new().insert("device", &device)));
+            let (r, w) = match self.ids.get(&device) {
+                Some(&ids) => ids,
+                None => {
+                    let r = reg.register(
+                        MetricDef::new("disk/read/bytes", Kind::Counter)
+                            .unit(Unit::Bytes).labels(Labels::new().insert("device", &device)));
+                    let w = reg.register(
+                        MetricDef::new("disk/write/bytes", Kind::Counter)
+                            .unit(Unit::Bytes).labels(Labels::new().insert("device", &device)));
+                    self.ids.insert(device, (r, w));
+                    (r, w)
+                }
+            };
             reg.record_counter(r, now, sread * SECTOR_BYTES);
             reg.record_counter(w, now, swritten * SECTOR_BYTES);
         }
@@ -44,8 +57,11 @@ mod tests {
     #[test]
     fn ingest_registers_read_write_counters() {
         let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
-        let s = DiskSampler::new(&reg, Duration::from_millis(10));
+        let mut s = DiskSampler::new(&reg, Duration::from_millis(10));
         let text = include_str!("../tests/fixtures/proc_diskstats");
+        s.ingest(&reg, Instant::now(), text);
+        assert_eq!(reg.metric_ids().len(), 4);
+        // Second tick hits the per-device id cache — no new registrations.
         s.ingest(&reg, Instant::now(), text);
         assert_eq!(reg.metric_ids().len(), 4);
     }

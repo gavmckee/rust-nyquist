@@ -148,69 +148,102 @@ fn cstr(buf: &[libc::c_char]) -> String {
     buf.iter().take_while(|&&c| c != 0).map(|&c| c as u8 as char).collect()
 }
 
+// Two kernel generations, two hazards (see StatsReader::stat_names/values):
+//  - Old kernels IGNORE the len passed in the GSTRINGS/GSTATS header and copy
+//    the current stat count, so if the count grows between GDRVINFO and these
+//    calls (ethtool -L adding queues), an exactly-sized buffer is overrun.
+//    The STAT_SLACK-sized buffer absorbs that.
+//  - New kernels (observed on 6.8) VALIDATE the len: passing anything other
+//    than the exact count (or 0) makes the ioctl succeed but return len=0
+//    with no data. So the header must carry the exact GDRVINFO count, never
+//    the padded capacity.
+// Reads clamp to the count the kernel writes back into the header; on a
+// count-change race a validating kernel returns 0 entries for one tick.
+const STAT_SLACK: usize = 1024;
+const MAX_STATS: usize = 8192;
+
+/// Persistent ETHTOOL_GSTATS reader: keeps the socket and a scratch buffer
+/// across calls so the per-tick hot path is two ioctls (GDRVINFO + GSTATS)
+/// with no heap traffic. Stat NAMES (one 32-byte string per stat — ~7k
+/// Strings per mlx5 port) are only materialized by `stat_names`, which
+/// callers invoke at init and when `stat_values` reports a changed count.
+pub struct StatsReader {
+    sock: EthtoolSocket,
+    buf:  Vec<u8>,
+}
+
+impl StatsReader {
+    pub fn new() -> io::Result<Self> {
+        Ok(StatsReader { sock: EthtoolSocket::open()?, buf: Vec::new() })
+    }
+
+    /// Current stat count from GDRVINFO; 0 if unsupported/implausible.
+    fn stat_count(&self, iface: &str) -> usize {
+        let mut drv: DrvInfoRaw = unsafe { std::mem::zeroed() };
+        drv.cmd = ETHTOOL_GDRVINFO;
+        if self.sock.ioctl(iface, &mut drv).is_err() { return 0; }
+        let n = drv.n_stats as usize;
+        if n == 0 || n > MAX_STATS { 0 } else { n }
+    }
+
+    /// Fetch stat names, positionally aligned with `stat_values` output.
+    /// Allocates one String per stat — call only on init or count change.
+    pub fn stat_names(&mut self, iface: &str) -> Vec<String> {
+        let n = self.stat_count(iface);
+        if n == 0 { return Vec::new(); }
+        let cap = n + STAT_SLACK;
+
+        // GSTRINGS layout: [cmd:u32, string_set:u32, len:u32] + cap * 32 bytes
+        self.buf.clear();
+        self.buf.resize(12 + cap * ETH_GSTRING_LEN, 0);
+        self.buf[0..4].copy_from_slice(&ETHTOOL_GSTRINGS.to_ne_bytes());
+        self.buf[4..8].copy_from_slice(&ETH_SS_STATS.to_ne_bytes());
+        self.buf[8..12].copy_from_slice(&(n as u32).to_ne_bytes());
+        if self.sock.ioctl_buf(iface, &mut self.buf).is_err() { return Vec::new(); }
+        let got = (u32::from_ne_bytes(self.buf[8..12].try_into().unwrap()) as usize).min(cap);
+
+        (0..got).map(|i| {
+            let off = 12 + i * ETH_GSTRING_LEN;
+            let raw = &self.buf[off..off + ETH_GSTRING_LEN];
+            let nul = raw.iter().position(|&b| b == 0).unwrap_or(ETH_GSTRING_LEN);
+            String::from_utf8_lossy(&raw[..nul]).into_owned()
+        }).collect()
+    }
+
+    /// Fetch current stat values into `out` (cleared and refilled),
+    /// positionally aligned with `stat_names`. Returns the count read.
+    /// Steady-state zero-alloc: scratch and `out` capacity are reused.
+    pub fn stat_values(&mut self, iface: &str, out: &mut Vec<u64>) -> usize {
+        out.clear();
+        let n = self.stat_count(iface);
+        if n == 0 { return 0; }
+        let cap = n + STAT_SLACK;
+
+        // GSTATS layout: [cmd:u32, n_stats:u32] + cap * 8 bytes
+        self.buf.clear();
+        self.buf.resize(8 + cap * 8, 0);
+        self.buf[0..4].copy_from_slice(&ETHTOOL_GSTATS.to_ne_bytes());
+        self.buf[4..8].copy_from_slice(&(n as u32).to_ne_bytes());
+        if self.sock.ioctl_buf(iface, &mut self.buf).is_err() { return 0; }
+        let got = (u32::from_ne_bytes(self.buf[4..8].try_into().unwrap()) as usize).min(cap);
+
+        out.extend((0..got).map(|i| {
+            let off = 8 + i * 8;
+            u64::from_ne_bytes(self.buf[off..off + 8].try_into().unwrap())
+        }));
+        got
+    }
+}
+
 /// Return all ethtool driver stats for an interface as (name, cumulative_value) pairs.
 /// Returns empty if the driver doesn't support ETHTOOL_GSTATS or the call fails.
+/// One-shot convenience — per-tick callers should hold a `StatsReader`.
 pub fn get_driver_stats(iface: &str) -> Vec<(String, u64)> {
-    let eth = match EthtoolSocket::open() {
-        Ok(s) => s,
-        Err(_) => return Vec::new(),
-    };
-
-    let mut drv: DrvInfoRaw = unsafe { std::mem::zeroed() };
-    drv.cmd = ETHTOOL_GDRVINFO;
-    if eth.ioctl(iface, &mut drv).is_err() { return Vec::new(); }
-
-    let n = drv.n_stats as usize;
-    // 0 stats or implausibly large → driver doesn't support GSTATS
-    if n == 0 || n > 8192 { return Vec::new(); }
-
-    // Two kernel generations, two hazards:
-    //  - Old kernels IGNORE the len we pass and copy the current stat count,
-    //    so if the count grows between GDRVINFO and these calls (ethtool -L
-    //    adding queues), an exactly-sized buffer is overrun. The slack-sized
-    //    buffer absorbs that.
-    //  - New kernels (observed on 6.8) VALIDATE the len: passing anything
-    //    other than the exact count (or 0) makes the ioctl succeed but
-    //    return len=0 with no data. So the header must carry the exact
-    //    GDRVINFO count, never the padded capacity.
-    // Reads clamp to the count the kernel writes back into the header; on a
-    // count-change race a validating kernel returns 0 entries for one tick.
-    const STAT_SLACK: usize = 1024;
-    let cap = n + STAT_SLACK;
-
-    // GSTRINGS layout: [cmd:u32, string_set:u32, len:u32] + cap * 32 bytes
-    let str_sz = 12 + cap * ETH_GSTRING_LEN;
-    let mut str_buf = vec![0u8; str_sz];
-    str_buf[0..4].copy_from_slice(&ETHTOOL_GSTRINGS.to_ne_bytes());
-    str_buf[4..8].copy_from_slice(&ETH_SS_STATS.to_ne_bytes());
-    str_buf[8..12].copy_from_slice(&(n as u32).to_ne_bytes());
-    if eth.ioctl_buf(iface, &mut str_buf).is_err() { return Vec::new(); }
-    let n_strings = u32::from_ne_bytes(str_buf[8..12].try_into().unwrap()) as usize;
-
-    // GSTATS layout: [cmd:u32, n_stats:u32] + cap * 8 bytes
-    let val_sz = 8 + cap * 8;
-    let mut val_buf = vec![0u8; val_sz];
-    val_buf[0..4].copy_from_slice(&ETHTOOL_GSTATS.to_ne_bytes());
-    val_buf[4..8].copy_from_slice(&(n as u32).to_ne_bytes());
-    if eth.ioctl_buf(iface, &mut val_buf).is_err() { return Vec::new(); }
-    let n_stats = u32::from_ne_bytes(val_buf[4..8].try_into().unwrap()) as usize;
-
-    // Pair names with values only where both calls returned an entry.
-    let n = n_strings.min(n_stats).min(cap);
-
-    let mut out = Vec::with_capacity(n);
-    for i in 0..n {
-        let off = 12 + i * ETH_GSTRING_LEN;
-        let raw = &str_buf[off..off + ETH_GSTRING_LEN];
-        let nul = raw.iter().position(|&b| b == 0).unwrap_or(ETH_GSTRING_LEN);
-        if nul == 0 { continue; }
-        let name = String::from_utf8_lossy(&raw[..nul]).into_owned();
-
-        let voff = 8 + i * 8;
-        let val = u64::from_ne_bytes(val_buf[voff..voff + 8].try_into().unwrap_or([0u8; 8]));
-        out.push((name, val));
-    }
-    out
+    let Ok(mut reader) = StatsReader::new() else { return Vec::new() };
+    let names = reader.stat_names(iface);
+    let mut values = Vec::new();
+    reader.stat_values(iface, &mut values);
+    names.into_iter().zip(values).collect()
 }
 
 pub fn collect_interfaces() -> HashMap<String, InterfaceBaselines> {

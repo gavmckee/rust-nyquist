@@ -60,10 +60,13 @@ pub fn collect_interfaces() -> HashMap<String, InterfaceBaselines> {
 }
 
 /// Return ethtool driver stats for a single interface as (name, cumulative_value) pairs.
-/// Used by the NIC stats sampler for per-queue and drop/miss counters.
+/// One-shot; per-tick callers should hold an [`ethtool::StatsReader`] (re-exported
+/// as [`StatsReader`]) so the socket, scratch buffer, and stat-name Strings are reused.
 pub fn get_driver_stats(iface: &str) -> Vec<(String, u64)> {
     ethtool::get_driver_stats(iface)
 }
+
+pub use ethtool::StatsReader;
 
 pub fn collect() -> SysConfig {
     let timestamp_ms = SystemTime::now()

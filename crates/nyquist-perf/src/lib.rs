@@ -20,10 +20,16 @@ impl Default for PerfConfig {
     }
 }
 
+/// `interval_for` resolves a per-sampler interval override by sampler name
+/// ("perf_hardware" / "perf_software"), falling back to `default_interval`.
+/// Every counter read is one syscall (events x CPUs per tick — ~2.5k on a
+/// 224-CPU box), so per-sampler intervals matter far more here than for the
+/// procfs samplers; running these at the global 10ms tick costs whole cores.
 pub fn build_perf_enabled(
     _reg: &Registry,
     default_interval: Duration,
     cfg: &PerfConfig,
+    interval_for: impl Fn(&str) -> Option<Duration>,
 ) -> Vec<Box<dyn Sampler>> {
     if !cfg.enabled { return Vec::new(); }
     let mut out: Vec<Box<dyn Sampler>> = Vec::new();
@@ -32,12 +38,16 @@ pub fn build_perf_enabled(
         let ncpus = events::num_cpus();
         let effective = if cfg.max_cpus == 0 { ncpus } else { cfg.max_cpus.min(ncpus) };
         if cfg.hw_enabled {
-            out.push(Box::new(hw::HardwareSampler::new(effective, default_interval)));
+            let iv = interval_for("perf_hardware").unwrap_or(default_interval);
+            out.push(Box::new(hw::HardwareSampler::new(effective, iv)));
         }
         if cfg.sw_enabled {
-            out.push(Box::new(sw::SoftwareSampler::new(effective, default_interval)));
+            let iv = interval_for("perf_software").unwrap_or(default_interval);
+            out.push(Box::new(sw::SoftwareSampler::new(effective, iv)));
         }
     }
+    #[cfg(not(target_os = "linux"))]
+    let _ = (default_interval, interval_for);
     out
 }
 
