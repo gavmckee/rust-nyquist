@@ -86,7 +86,7 @@ impl Sampler for SoftwareSampler {
                 if let Err(e) = self.try_init(reg) {
                     if matches!(e, PerfError::Permission) {
                         tracing::warn!(
-                            "perf/sw disabled: {}. Run as root or: sudo sysctl kernel.perf_event_paranoid=1",
+                            "perf/sw disabled: {}. Run as root or: sudo sysctl kernel.perf_event_paranoid=0",
                             e
                         );
                         self.disabled = true;
