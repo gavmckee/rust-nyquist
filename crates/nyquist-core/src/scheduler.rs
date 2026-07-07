@@ -42,19 +42,32 @@ pub fn spawn_sink(
     mut shutdown: tokio::sync::watch::Receiver<bool>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
+        // Self-metric: export failures were previously log-only, so the
+        // agent's own data loss was unalertable. Recorded every tick (not
+        // just on failure) so the series stays live and rates read 0.
+        let fail_id = reg.register(
+            crate::registry::MetricDef::new("nyquist/sink/export_failures", crate::model::Kind::Counter)
+                .unit(crate::model::Unit::Count)
+                .labels(crate::model::Labels::new().insert("sink", sink.name())),
+        );
+        let mut failures: u64 = 0;
+
         let mut ticker = tokio::time::interval(export_interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             tokio::select! {
                 _ = ticker.tick() => {
-                    let snapshot = reg.snapshot(Instant::now());
+                    let now = Instant::now();
+                    let snapshot = reg.snapshot(now);
                     if let Err(e) = sink.export(&snapshot).await {
-                        tracing::warn!(error = %e, "sink export failed");
+                        failures += 1;
+                        tracing::warn!(sink = sink.name(), error = %e, "sink export failed");
                         if !fault_tolerant {
-                            tracing::error!("exiting: fault_tolerant=false");
+                            tracing::error!(sink = sink.name(), "exiting: fault_tolerant=false");
                             return;
                         }
                     }
+                    reg.record_counter(fail_id, now, failures);
                 }
                 _ = shutdown.changed() => {
                     let snapshot = reg.snapshot(Instant::now());
@@ -110,6 +123,8 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::sink::Sink for ObservableSink {
+        fn name(&self) -> &str { "observable" }
+
         async fn export(&mut self, _s: &crate::snapshot::RegistrySnapshot) -> Result<(), crate::sink::SinkError> {
             self.exports.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok(())
@@ -118,6 +133,34 @@ mod tests {
             self.flushed.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(())
         }
+    }
+
+    struct FailingSink;
+
+    #[async_trait::async_trait]
+    impl crate::sink::Sink for FailingSink {
+        fn name(&self) -> &str { "failing" }
+        async fn export(&mut self, _s: &crate::snapshot::RegistrySnapshot) -> Result<(), crate::sink::SinkError> {
+            Err("boom".into())
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn sink_failures_are_counted_in_registry() {
+        use crate::model::{Labels, Unit};
+        let reg = Arc::new(Registry::new(Duration::from_millis(100), Duration::from_secs(1)));
+        let (_tx, rx) = tokio::sync::watch::channel(false);
+        let handle = spawn_sink(Box::new(FailingSink), reg.clone(), Duration::from_millis(20), true, rx);
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        handle.abort();
+        // Same def → same MetricId as the scheduler registered.
+        let id = reg.register(
+            MetricDef::new("nyquist/sink/export_failures", Kind::Counter)
+                .unit(Unit::Count)
+                .labels(Labels::new().insert("sink", "failing")),
+        );
+        let n = reg.raw(id);
+        assert!(n >= 5, "expected >=5 counted failures, got {n}");
     }
 
     #[tokio::test(start_paused = true)]

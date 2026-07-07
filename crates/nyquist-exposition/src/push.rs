@@ -28,6 +28,8 @@ impl VictoriaMetricsSink {
 
 #[async_trait::async_trait]
 impl Sink for VictoriaMetricsSink {
+    fn name(&self) -> &str { "victoria_metrics" }
+
     async fn export(&mut self, snapshot: &RegistrySnapshot) -> Result<(), SinkError> {
         if snapshot.metrics.is_empty() { return Ok(()); }
         let body = to_prometheus(snapshot, &self.percentiles);

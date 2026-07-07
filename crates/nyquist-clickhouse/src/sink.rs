@@ -1,4 +1,4 @@
-use std::time::UNIX_EPOCH;
+use std::time::{Duration, UNIX_EPOCH};
 use async_trait::async_trait;
 use clickhouse::Client;
 use nyquist_core::sink::{Sink, SinkError};
@@ -41,8 +41,8 @@ impl ClickHouseSink {
 
     async fn ensure_schema(&mut self) -> Result<(), SinkError> {
         if self.initialized { return Ok(()); }
-        self.base.query(&create_db_sql(&self.database)).execute().await?;
-        self.client.query(&create_table_sql(&self.database)).execute().await?;
+        with_timeout(self.base.query(&create_db_sql(&self.database)).execute()).await?;
+        with_timeout(self.client.query(&create_table_sql(&self.database)).execute()).await?;
         self.initialized = true;
         tracing::info!(database = %self.database, "ClickHouse schema ready");
         Ok(())
@@ -58,13 +58,32 @@ impl ClickHouseSink {
             if i > 0 { sql.push(','); }
             row.append_to(&mut sql);
         }
-        self.client.query(&sql).execute().await?;
+        with_timeout(self.client.query(&sql).execute()).await?;
         Ok(())
+    }
+}
+
+/// The clickhouse crate sets no request timeout; a hung TCP connection
+/// (half-open after a server restart, black-holed route) previously wedged
+/// the sink task forever.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+async fn with_timeout<T, E>(
+    fut: impl std::future::Future<Output = Result<T, E>>,
+) -> Result<T, SinkError>
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
+    match tokio::time::timeout(REQUEST_TIMEOUT, fut).await {
+        Ok(res) => res.map_err(|e| Box::new(e) as SinkError),
+        Err(_) => Err(format!("clickhouse request timed out after {REQUEST_TIMEOUT:?}").into()),
     }
 }
 
 #[async_trait]
 impl Sink for ClickHouseSink {
+    fn name(&self) -> &str { "clickhouse" }
+
     async fn export(&mut self, snapshot: &RegistrySnapshot) -> Result<(), SinkError> {
         if let Err(e) = self.ensure_schema().await {
             tracing::warn!(error = %e, "clickhouse: schema init failed, skipping export");

@@ -30,6 +30,8 @@ impl RecorderSink {
 
 #[async_trait]
 impl Sink for RecorderSink {
+    fn name(&self) -> &str { "recorder" }
+
     async fn export(&mut self, snapshot: &RegistrySnapshot) -> Result<(), SinkError> {
         // No interval gate here: spawn_sink's ticker already fires at exactly
         // the configured flush_interval (see the identical fix in the
