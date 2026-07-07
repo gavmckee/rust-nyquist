@@ -118,9 +118,19 @@ Before retiring a procfs/perf sampler in favour of a BPF replacement:
 
 - **Dual model (§13).** procfs/perf and BPF paths coexist during migration behind
   one snapshot interface; both are independently tested.
-- **Durable-record summaries (§9, design §3.4/§6.6).** The Parquet recorder keeps
-  pre-computed percentile columns in the foundation; switching it to store full
-  H2 bucket arrays is a committed follow-on spec.
 - **Retained procfs families.** `memory/*`, `psi/*`, `loadavg`, `sockstat`,
-  `snmp`/`netstat` (interim), `nic_stats` (ethtool discovery) — see
-  [`coverage-map.md`](coverage-map.md).
+  `snmp`/`netstat`/`snmp6` (interim, now incl. IPv6), `network/*` bytes+errors
+  (BPF traffic covers only the drop breakdown), `cpu/usage/steal`, `nic_stats`
+  (ethtool discovery) — see [`coverage-map.md`](coverage-map.md).
+
+## Resolved deviations
+
+- **Durable-record summaries (§9, design §3.4/§6.6) — RESOLVED.** The Parquet
+  recorder stores full H2 bucket arrays (`buckets_json`), not pre-computed
+  percentile columns, so percentile/window choice stays a read-time consumer
+  concern for durable records too.
+- **eBPF distributions are windowed — RESOLVED.** Kernel histograms are
+  cumulative; the registry keeps periodic checkpoints and snapshots emit
+  `latest − checkpoint(≈window ago)`, so BPF latency percentiles reflect the
+  trailing window like every other metric (not since-agent-start). Stale
+  direct-bucket metrics (dead sampler) expire to empty rather than freezing.
