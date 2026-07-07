@@ -2,7 +2,7 @@
 
 pub fn num_cpus() -> usize {
     if let Ok(s) = std::fs::read_to_string("/sys/devices/system/cpu/present") {
-        if let Some(end) = s.trim().split('-').last() {
+        if let Some(end) = s.trim().split('-').next_back() {
             if let Ok(n) = end.parse::<usize>() {
                 return n + 1;
             }
@@ -22,7 +22,7 @@ pub mod linux {
 
     #[derive(Debug, thiserror::Error)]
     pub enum PerfError {
-        #[error("perf_event_open permission denied — requires CAP_PERFMON or perf_event_paranoid <= 1")]
+        #[error("perf_event_open permission denied — system-wide counters require CAP_PERFMON or perf_event_paranoid <= 0")]
         Permission,
         #[error("perf_event_open error: {0}")]
         Io(#[from] std::io::Error),
@@ -37,10 +37,12 @@ pub mod linux {
             cpu: usize,
             kind: impl Into<perf_event::events::Event>,
         ) -> Result<Self, PerfError> {
-            let counter = Builder::new()
-                .kind(kind)
-                .one_cpu(cpu)
-                .any_pid()
+            // Builder defaults to disabled(1) + exclude_kernel(1)/exclude_hv(1):
+            // without enabled(true) the counter never counts (reads stay 0), and
+            // for a system-wide agent kernel time is most of what we want to see.
+            let mut builder = Builder::new().kind(kind).one_cpu(cpu).any_pid();
+            builder.enabled(true).include_kernel().include_hv();
+            let counter = builder
                 .build()
                 .map_err(|e| {
                     if e.raw_os_error() == Some(libc::EPERM)

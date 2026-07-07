@@ -27,16 +27,20 @@ pub struct SockstatSnapshot {
     pub udp_inuse: u64,
 }
 
-pub fn parse_proc_stat(text: &str) -> Vec<(String, [u64; 7])> {
+/// Fields: user nice system idle iowait irq softirq steal.
+/// `steal` (hypervisor-stolen time) is zero-padded on pre-2.6.11 kernels
+/// that don't report it — omitting it entirely made CPU accounting
+/// understate contention on VMs exactly when the hypervisor was stealing.
+pub fn parse_proc_stat(text: &str) -> Vec<(String, [u64; 8])> {
     let mut out = Vec::new();
     for line in text.lines() {
         if !line.starts_with("cpu") { continue; }
         let mut it = line.split_whitespace();
         let label = match it.next() { Some(l) => l.to_string(), None => continue };
-        let vals: Vec<u64> = it.take(7).filter_map(|v| v.parse().ok()).collect();
-        if vals.len() == 7 {
-            let mut arr = [0u64; 7];
-            arr.copy_from_slice(&vals);
+        let vals: Vec<u64> = it.take(8).filter_map(|v| v.parse().ok()).collect();
+        if vals.len() >= 7 {
+            let mut arr = [0u64; 8];
+            arr[..vals.len()].copy_from_slice(&vals);
             out.push((label, arr));
         }
     }
@@ -135,6 +139,21 @@ pub fn parse_net_snmp(text: &str) -> HashMap<String, HashMap<String, u64>> {
     out
 }
 
+/// Parse `/proc/net/snmp6`. Unlike `/proc/net/snmp` (header row + data row per
+/// protocol), snmp6 is one `Key<whitespace>Value` pair per line with the
+/// protocol baked into the key prefix (Ip6*, Icmp6*, Udp6*).
+pub fn parse_net_snmp6(text: &str) -> HashMap<String, u64> {
+    let mut out = HashMap::new();
+    for line in text.lines() {
+        let mut it = line.split_whitespace();
+        let (Some(key), Some(val)) = (it.next(), it.next()) else { continue };
+        if let Ok(v) = val.parse::<u64>() {
+            out.insert(key.to_string(), v);
+        }
+    }
+    out
+}
+
 /// Parse `/proc/loadavg`. Returns (load1, load5, load15) scaled ×100 as u64.
 /// A load of 0.15 is returned as 15.
 pub fn parse_loadavg(text: &str) -> Option<(u64, u64, u64)> {
@@ -175,8 +194,8 @@ pub fn parse_sockstat(text: &str) -> SockstatSnapshot {
         let fields: Vec<&str> = line.split_whitespace().collect();
         match fields.first().copied() {
             Some("TCP:") => {
-                let mut it = fields[1..].chunks(2);
-                while let Some(pair) = it.next() {
+                let it = fields[1..].chunks(2);
+                for pair in it {
                     if pair.len() < 2 { break; }
                     let val: u64 = pair[1].parse().unwrap_or(0);
                     match pair[0] {
@@ -188,8 +207,8 @@ pub fn parse_sockstat(text: &str) -> SockstatSnapshot {
                 }
             }
             Some("UDP:") => {
-                let mut it = fields[1..].chunks(2);
-                while let Some(pair) = it.next() {
+                let it = fields[1..].chunks(2);
+                for pair in it {
                     if pair.len() < 2 { break; }
                     if pair[0] == "inuse" { snap.udp_inuse = pair[1].parse().unwrap_or(0); }
                 }

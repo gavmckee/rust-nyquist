@@ -9,21 +9,25 @@ pub enum ConfigError {
     Io(#[from] std::io::Error),
     #[error("parsing config: {0}")]
     Parse(#[from] toml::de::Error),
+    #[error("invalid config: {0}")]
+    Invalid(String),
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
+#[derive(Default)]
 pub struct Config {
     pub general:          General,
     pub samplers:         BTreeMap<String, SamplerConfig>,
     pub recorder:         RecorderConfig,
     pub clickhouse:       ClickHouseConfig,
+    pub syswatch:         SysWatchConfig,
     pub perf:             PerfConfig,
     pub victoria_metrics: VictoriaMetricsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct PerfConfig {
     pub enabled:    bool,
     pub max_cpus:   usize,
@@ -38,7 +42,7 @@ impl Default for PerfConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct RecorderConfig {
     pub enabled: bool,
     pub output_dir: String,
@@ -49,7 +53,7 @@ pub struct RecorderConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct ClickHouseConfig {
     pub enabled: bool,
     pub url: String,
@@ -61,7 +65,7 @@ pub struct ClickHouseConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct General {
     pub listen: String,
     #[serde(with = "humantime_serde")]
@@ -74,7 +78,7 @@ pub struct General {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct SamplerConfig {
     pub enabled: bool,
     #[serde(with = "humantime_serde::option")]
@@ -110,7 +114,7 @@ impl Default for RecorderConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct VictoriaMetricsConfig {
     pub enabled: bool,
     pub url: String,
@@ -141,25 +145,72 @@ impl Default for ClickHouseConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            general:          General::default(),
-            samplers:         BTreeMap::new(),
-            recorder:         RecorderConfig::default(),
-            clickhouse:       ClickHouseConfig::default(),
-            perf:             PerfConfig::default(),
-            victoria_metrics: VictoriaMetricsConfig::default(),
-        }
-    }
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+#[derive(Default)]
+pub struct SysWatchConfig {
+    pub enabled: bool,
 }
+
+
 
 impl Config {
     pub fn load(path: &Path) -> Result<Config, ConfigError> {
         let text = std::fs::read_to_string(path)?;
-        Ok(toml::from_str(&text)?)
+        let config: Config = toml::from_str(&text)?;
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Reject configurations that parse fine but misbehave at runtime:
+    /// zero durations panic inside tokio::time::interval (in a spawned task,
+    /// where the panic used to be silently swallowed), and out-of-range
+    /// percentiles produce nonsense quietly.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        let invalid = |msg: String| Err(ConfigError::Invalid(msg));
+        if self.general.default_interval.is_zero() {
+            return invalid("general.default_interval must be non-zero".into());
+        }
+        if self.general.window.is_zero() {
+            return invalid("general.window must be non-zero".into());
+        }
+        for &p in &self.general.percentiles {
+            if !(p > 0.0 && p <= 100.0) {
+                return invalid(format!("general.percentiles entry {p} not in (0, 100]"));
+            }
+        }
+        for (name, s) in &self.samplers {
+            if s.interval == Some(Duration::ZERO) {
+                return invalid(format!("samplers.{name}.interval must be non-zero"));
+            }
+        }
+        if self.recorder.enabled
+            && (self.recorder.rotation_interval.is_zero() || self.recorder.flush_interval.is_zero())
+        {
+            return invalid("recorder rotation_interval/flush_interval must be non-zero".into());
+        }
+        if self.clickhouse.enabled && self.clickhouse.insert_interval.is_zero() {
+            return invalid("clickhouse.insert_interval must be non-zero".into());
+        }
+        if self.victoria_metrics.enabled && self.victoria_metrics.push_interval.is_zero() {
+            return invalid("victoria_metrics.push_interval must be non-zero".into());
+        }
+        Ok(())
     }
     pub fn sampler(&self, name: &str) -> SamplerConfig {
         self.samplers.get(name).cloned().unwrap_or_default()
+    }
+
+    /// The fastest interval any enabled sampler will tick at. Used to size
+    /// per-slice histogram sample capacity so sub-default intervals (e.g. 2 ms)
+    /// aren't truncated.
+    pub fn min_sampler_interval(&self) -> Duration {
+        self.samplers
+            .values()
+            .filter(|s| s.enabled)
+            .filter_map(|s| s.interval)
+            .chain(std::iter::once(self.general.default_interval))
+            .min()
+            .expect("chain always yields default_interval")
     }
 }

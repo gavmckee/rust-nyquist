@@ -15,5 +15,3 @@ max_cpus   = 32
 hw_enabled = true
 sw_enabled = true
 
-[ebpf]
-enabled = true

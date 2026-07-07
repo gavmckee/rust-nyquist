@@ -58,8 +58,16 @@ impl CpuUsage {
         let ids = (0..cpu_count).map(|cpu| {
             let mut row = [MetricId(0); 3];
             for (slot, &(field, _state_idx)) in STATES.iter().enumerate() {
-                // Match procfs label format: "cpu0", "cpu1", etc.
-                let labels = Labels::new().insert("cpu", &format!("cpu{cpu}"));
+                // Keep the same cpu label as procfs ("cpu0", "cpu1", …) but add
+                // source="ebpf" so this kprobe series (nanoseconds, from
+                // cpuacct_account_field) does NOT collide with the procfs cpu
+                // sampler's identically-named jiffies series. Without this label
+                // both register the same MetricId and their differing units
+                // alternate into one rate histogram, overflowing it (p99 pins at
+                // 2^39-1). The distinguishing label keeps them as separate series.
+                let labels = Labels::new()
+                    .insert("cpu", format!("cpu{cpu}"))
+                    .insert("source", "ebpf");
                 row[slot] = reg.register(
                     MetricDef::new(format!("cpu/usage/{field}"), Kind::Counter)
                         .unit(Unit::Count)
@@ -74,8 +82,9 @@ impl CpuUsage {
     fn try_init(&mut self) -> anyhow::Result<()> {
         use std::mem::MaybeUninit;
         use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
-        let mut object = MaybeUninit::uninit();
-        let open_skel = skel::ModSkelBuilder::default().open(&mut object)?;
+        // Leaked so the skeleton's borrow of the OpenObject is genuinely 'static.
+        let object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
         loaded.attach()?;
 
@@ -88,7 +97,7 @@ impl CpuUsage {
         let ptr = mmap.as_ptr() as *const u64;
         std::mem::forget(mmap);
 
-        let skel: Box<skel::ModSkel<'static>> = unsafe { std::mem::transmute(Box::new(loaded)) };
+        let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
         self.state = State::Running { _skel: skel, ptr };
         Ok(())
     }

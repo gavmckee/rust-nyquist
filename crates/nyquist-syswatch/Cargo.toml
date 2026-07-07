@@ -1,0 +1,19 @@
+[package]
+name = "nyquist-syswatch"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+nyquist-sysconfig = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["rt", "time", "sync"] }
+clickhouse = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libbpf-rs = { workspace = true }
+libc = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.build-dependencies]
+libbpf-cargo = { workspace = true }

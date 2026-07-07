@@ -164,20 +164,35 @@ pub fn get_driver_stats(iface: &str) -> Vec<(String, u64)> {
     // 0 stats or implausibly large → driver doesn't support GSTATS
     if n == 0 || n > 8192 { return Vec::new(); }
 
-    // GSTRINGS layout: [cmd:u32, string_set:u32, len:u32] + n * 32 bytes
-    let str_sz = 12 + n * ETH_GSTRING_LEN;
+    // The kernel's GSTRINGS/GSTATS handlers re-query the stat count at ioctl
+    // time and copy THAT many entries to userspace, ignoring the len we pass
+    // in. If the count grows between GDRVINFO and these calls (e.g.
+    // `ethtool -L` adding queues — each adds tens of stats on mlx5/ixgbe),
+    // the kernel writes past the end of an exactly-sized buffer. Allocate
+    // generous slack so a concurrent grow cannot overrun, and clamp all reads
+    // to the count the kernel writes back into the header.
+    const STAT_SLACK: usize = 1024;
+    let cap = n + STAT_SLACK;
+
+    // GSTRINGS layout: [cmd:u32, string_set:u32, len:u32] + cap * 32 bytes
+    let str_sz = 12 + cap * ETH_GSTRING_LEN;
     let mut str_buf = vec![0u8; str_sz];
     str_buf[0..4].copy_from_slice(&ETHTOOL_GSTRINGS.to_ne_bytes());
     str_buf[4..8].copy_from_slice(&ETH_SS_STATS.to_ne_bytes());
-    str_buf[8..12].copy_from_slice(&(n as u32).to_ne_bytes());
+    str_buf[8..12].copy_from_slice(&(cap as u32).to_ne_bytes());
     if eth.ioctl_buf(iface, &mut str_buf).is_err() { return Vec::new(); }
+    let n_strings = u32::from_ne_bytes(str_buf[8..12].try_into().unwrap()) as usize;
 
-    // GSTATS layout: [cmd:u32, n_stats:u32] + n * 8 bytes
-    let val_sz = 8 + n * 8;
+    // GSTATS layout: [cmd:u32, n_stats:u32] + cap * 8 bytes
+    let val_sz = 8 + cap * 8;
     let mut val_buf = vec![0u8; val_sz];
     val_buf[0..4].copy_from_slice(&ETHTOOL_GSTATS.to_ne_bytes());
-    val_buf[4..8].copy_from_slice(&(n as u32).to_ne_bytes());
+    val_buf[4..8].copy_from_slice(&(cap as u32).to_ne_bytes());
     if eth.ioctl_buf(iface, &mut val_buf).is_err() { return Vec::new(); }
+    let n_stats = u32::from_ne_bytes(val_buf[4..8].try_into().unwrap()) as usize;
+
+    // Pair names with values only where both calls returned an entry.
+    let n = n_strings.min(n_stats).min(cap);
 
     let mut out = Vec::with_capacity(n);
     for i in 0..n {

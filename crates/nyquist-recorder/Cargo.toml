@@ -1,17 +1,17 @@
 [package]
 name = "nyquist-recorder"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-nyquist-core = { path = "../nyquist-core" }
-arrow-array  = "53"
-arrow-schema = "53"
-parquet      = { version = "53", default-features = false, features = ["snap", "arrow"] }
-async-trait  = "0.1"
-thiserror    = "1"
-tracing      = "0.1"
+nyquist-core = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+parquet = { workspace = true, features = ["snap", "arrow"] }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
-tokio    = { version = "1", features = ["macros", "rt-multi-thread"] }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

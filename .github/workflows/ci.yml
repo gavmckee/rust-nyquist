@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # clang + libelf are required by libbpf-cargo to compile the BPF C
+      # programs (vmlinux.h is vendored, so no kernel headers needed).
+      - name: Install BPF build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libelf-dev zlib1g-dev
+
+      # rustup installs the toolchain pinned in rust-toolchain.toml.
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+      - name: Release build
+        run: cargo build --workspace --release

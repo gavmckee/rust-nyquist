@@ -22,13 +22,29 @@ pub fn labels_json(labels: &Labels) -> String {
     for (i, (k, v)) in labels.iter().enumerate() {
         if i > 0 { buf.push(','); }
         buf.push('"');
-        buf.push_str(k);
+        push_json_escaped(&mut buf, k);
         buf.push_str("\":\"");
-        buf.push_str(v);
+        push_json_escaped(&mut buf, v);
         buf.push('"');
     }
     buf.push('}');
     buf
+}
+
+/// Escape a string for embedding in a JSON string literal. Without this, a
+/// label value containing `"` or `\` produces an unparseable labels_json cell.
+fn push_json_escaped(buf: &mut String, s: &str) {
+    for c in s.chars() {
+        match c {
+            '"' => buf.push_str("\\\""),
+            '\\' => buf.push_str("\\\\"),
+            '\n' => buf.push_str("\\n"),
+            '\r' => buf.push_str("\\r"),
+            '\t' => buf.push_str("\\t"),
+            c if (c as u32) < 0x20 => buf.push_str(&format!("\\u{:04x}", c as u32)),
+            c => buf.push(c),
+        }
+    }
 }
 
 fn kind_str(k: Kind) -> &'static str {
@@ -73,6 +89,12 @@ pub struct RowAccumulator {
     buckets_json: Vec<String>,
 }
 
+impl Default for RowAccumulator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RowAccumulator {
     pub fn new() -> Self {
         RowAccumulator {
@@ -99,17 +121,35 @@ impl RowAccumulator {
     pub fn len(&self) -> usize { self.ts_unix_ms.len() }
     pub fn is_empty(&self) -> bool { self.ts_unix_ms.is_empty() }
 
-    pub fn drain(&mut self) -> RecordBatch {
+    /// Build a RecordBatch without consuming the rows, so a failed write can
+    /// retry them on the next flush. Call `clear()` once the batch is durable.
+    pub fn to_batch(&self) -> RecordBatch {
         let schema = nyquist_schema();
         RecordBatch::try_new(schema, vec![
-            Arc::new(Int64Array::from(std::mem::take(&mut self.ts_unix_ms))),
-            Arc::new(StringArray::from(std::mem::take(&mut self.name))),
-            Arc::new(StringArray::from(std::mem::take(&mut self.labels_json))),
-            Arc::new(StringArray::from(std::mem::take(&mut self.kind))),
-            Arc::new(StringArray::from(std::mem::take(&mut self.unit))),
-            Arc::new(UInt64Array::from(std::mem::take(&mut self.raw))),
-            Arc::new(StringArray::from(std::mem::take(&mut self.buckets_json))),
+            Arc::new(Int64Array::from(self.ts_unix_ms.clone())),
+            Arc::new(StringArray::from(self.name.clone())),
+            Arc::new(StringArray::from(self.labels_json.clone())),
+            Arc::new(StringArray::from(self.kind.clone())),
+            Arc::new(StringArray::from(self.unit.clone())),
+            Arc::new(UInt64Array::from(self.raw.clone())),
+            Arc::new(StringArray::from(self.buckets_json.clone())),
         ]).expect("schema matches column types")
+    }
+
+    pub fn clear(&mut self) {
+        self.ts_unix_ms.clear();
+        self.name.clear();
+        self.labels_json.clear();
+        self.kind.clear();
+        self.unit.clear();
+        self.raw.clear();
+        self.buckets_json.clear();
+    }
+
+    pub fn drain(&mut self) -> RecordBatch {
+        let batch = self.to_batch();
+        self.clear();
+        batch
     }
 }
 

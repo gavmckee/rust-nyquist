@@ -2,18 +2,13 @@
 resolver = "2"
 members = ["crates/*"]
 
-[package]
-name = "nyquist"
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "High-resolution oversampling systems telemetry agent"
 
-[[bin]]
-name = "nyquist"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
+# internal crates
 nyquist-core = { path = "crates/nyquist-core" }
 nyquist-config = { path = "crates/nyquist-config" }
 nyquist-samplers = { path = "crates/nyquist-samplers" }
@@ -22,18 +17,73 @@ nyquist-recorder = { path = "crates/nyquist-recorder" }
 nyquist-clickhouse = { path = "crates/nyquist-clickhouse" }
 nyquist-perf = { path = "crates/nyquist-perf" }
 nyquist-ebpf = { path = "crates/nyquist-ebpf" }
-tokio = { version = "1", features = ["full"] }
-anyhow = "1"
-libc = "0.2"
-clap = { version = "4", features = ["derive"] }
+nyquist-syswatch = { path = "crates/nyquist-syswatch" }
+nyquist-sysconfig = { path = "crates/nyquist-sysconfig" }
+# external crates
+tokio = "1"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-[dev-dependencies]
-nyquist-core = { path = "crates/nyquist-core" }
-nyquist-exposition = { path = "crates/nyquist-exposition" }
-nyquist-recorder = { path = "crates/nyquist-recorder" }
+tracing-subscriber = "0.3"
+async-trait = "0.1"
+thiserror = "1"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
+linkme = "0.3"
+histogram = "0.11"
+dashmap = "6"
+clickhouse = "0.13"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+clap = "4"
+toml = "0.8"
+humantime-serde = "1"
 axum = "0.7"
 tower = "0.5"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tempfile = "3"
+proptest = "1"
+libbpf-rs = "0.24"
+libbpf-cargo = "0.24"
+memmap2 = "0.9"
+arrow-array = "53"
+arrow-schema = "53"
+parquet = { version = "53", default-features = false }
+rmcp = "1.8"
+schemars = "1"
+perf-event = "0.4"
+
+[package]
+name = "nyquist"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "High-resolution oversampling systems telemetry agent"
+
+[[bin]]
+name = "nyquist"
+path = "src/main.rs"
+
+[dependencies]
+nyquist-core = { workspace = true }
+nyquist-config = { workspace = true }
+nyquist-samplers = { workspace = true }
+nyquist-exposition = { workspace = true }
+nyquist-recorder = { workspace = true }
+nyquist-clickhouse = { workspace = true }
+nyquist-perf = { workspace = true }
+nyquist-ebpf = { workspace = true }
+nyquist-syswatch = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+anyhow = { workspace = true }
+libc = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[dev-dependencies]
+nyquist-core = { workspace = true }
+nyquist-exposition = { workspace = true }
+nyquist-recorder = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile = { workspace = true }

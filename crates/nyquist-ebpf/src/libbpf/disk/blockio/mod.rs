@@ -54,7 +54,14 @@ impl BlockIo {
             .into_iter()
             .take(MAX_DEVICES)
             .map(|(name, _devts)| {
-                let lbl = || Labels::new().insert("device", name.as_str());
+                // source="ebpf" so these since-agent-start counters do NOT
+                // collide with the procfs disk sampler's identically-named
+                // since-boot series. Without it both hash to the same MetricId
+                // and the alternating origins produce huge false deltas that
+                // pin the rate histogram at 2^39-1. Mirrors cpu/usage.
+                let lbl = || Labels::new()
+                    .insert("device", name.as_str())
+                    .insert("source", "ebpf");
                 let ids = DeviceIds {
                     read_bytes:     reg.register(MetricDef::new("disk/read/bytes",     Kind::Counter).unit(Unit::Bytes).labels(lbl())),
                     write_bytes:    reg.register(MetricDef::new("disk/write/bytes",    Kind::Counter).unit(Unit::Bytes).labels(lbl())),
@@ -71,8 +78,11 @@ impl BlockIo {
 
     fn try_init(&mut self) -> anyhow::Result<()> {
         use std::mem::MaybeUninit;
-        let mut object = MaybeUninit::uninit();
-        let open_skel = skel::ModSkelBuilder::default().open(&mut object)?;
+        // Leaked so the skeleton's borrow of the OpenObject is genuinely
+        // 'static. A stack-local here + transmute leaves the skeleton holding
+        // a dangling reference into a dead frame (UB, use-after-free on drop).
+        let object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
 
         // Populate devt_to_slot before attaching so no events are missed.
@@ -98,8 +108,7 @@ impl BlockIo {
             LATENCY_TOTAL,
         )?;
 
-        let skel: Box<skel::ModSkel<'static>> =
-            unsafe { std::mem::transmute(Box::new(loaded)) };
+        let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
         self.state = State::Running { _skel: skel, counter_ptr, latency_ptr };
         Ok(())
     }
@@ -144,7 +153,7 @@ impl Sampler for BlockIo {
 
             for (slot, (_name, ids)) in self.devices.iter().enumerate() {
                 let base = slot * GROUP_WIDTH;
-                reg.record_counter(ids.read_bytes,     now, counters[base + 0]);
+                reg.record_counter(ids.read_bytes,     now, counters[base]);
                 reg.record_counter(ids.write_bytes,    now, counters[base + 1]);
                 reg.record_counter(ids.read_requests,  now, counters[base + 2]);
                 reg.record_counter(ids.write_requests, now, counters[base + 3]);

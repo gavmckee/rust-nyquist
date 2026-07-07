@@ -17,6 +17,9 @@ username = "default"
 password = "nyquist"
 insert_interval = "10s"
 
+[syswatch]
+enabled = true
+
 [perf]
 enabled = false
 

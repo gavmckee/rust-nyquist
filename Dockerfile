@@ -2,18 +2,12 @@
 FROM rust:1-slim-bookworm AS builder
 WORKDIR /build
 
-# Dependencies for bpf-linker: needs system LLVM 14 headers to avoid
-# building LLVM from source (which takes 20+ minutes).
+# libbpf-cargo compiles the BPF C programs with clang and links against
+# libelf/zlib. (The nightly + bpf-linker install that used to live here
+# served the retired Aya toolchain — the libbpf-rs path needs neither.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    clang llvm-14-dev libelf-dev libbpf-dev pkg-config make \
-    && ln -sf /usr/bin/llvm-config-14 /usr/local/bin/llvm-config \
+    clang libelf-dev zlib1g-dev pkg-config make \
     && rm -rf /var/lib/apt/lists/*
-
-# Install nightly with rust-src (needed for BPF build-std=core)
-RUN rustup toolchain install nightly --component rust-src
-
-# Install bpf-linker against system LLVM 14
-RUN cargo install bpf-linker
 
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \

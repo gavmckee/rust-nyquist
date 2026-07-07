@@ -89,7 +89,7 @@ impl Sampler for HardwareSampler {
                 if let Err(e) = self.try_init(reg) {
                     if matches!(e, PerfError::Permission) {
                         tracing::warn!(
-                            "perf/hw disabled: {}. Run as root or: sudo sysctl kernel.perf_event_paranoid=1",
+                            "perf/hw disabled: {}. Run as root or: sudo sysctl kernel.perf_event_paranoid=0",
                             e
                         );
                         self.disabled = true;

@@ -1,8 +1,8 @@
-/// Converts a `MetricSnapshot` into a ClickHouse INSERT row.
-///
-/// One row per unique (metric_name, labels) combination per snapshot.
-/// All four percentiles are stored as separate columns — no label fanout
-/// needed for percentile queries, unlike the Prometheus/PromQL model.
+//! Converts a `MetricSnapshot` into a ClickHouse INSERT row.
+//!
+//! One row per unique (metric_name, labels) combination per snapshot.
+//! All four percentiles are stored as separate columns — no label fanout
+//! needed for percentile queries, unlike the Prometheus/PromQL model.
 
 use nyquist_core::snapshot::MetricSnapshot;
 use nyquist_core::percentiles::percentiles_from_buckets;

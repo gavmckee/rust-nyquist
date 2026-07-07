@@ -1,2 +1,9 @@
 [toolchain]
-channel = "stable"
+# Pinned so CI, docker builds, and dev boxes agree on a compiler.
+# Bump deliberately; "stable" is a moving target that made builds
+# irreproducible across weeks.
+channel = "1.96.0"
+# CI runners install with the minimal profile; components must be explicit.
+# rustfmt is not for `cargo fmt` — libbpf-cargo shells out to it when
+# generating the BPF skeletons, so builds fail without it.
+components = ["clippy", "rustfmt"]

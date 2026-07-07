@@ -13,8 +13,8 @@ const NLMSG_DONE: u16 = 3;
 const NLMSG_ERROR: u16 = 2;
 const INET_DIAG_INFO: u16 = 2;
 
-// AF_INET (2) — we issue a separate query for IPv6 if needed; IPv4 covers most server traffic
 const AF_INET: u8 = 2;
+const AF_INET6: u8 = 10;
 const IPPROTO_TCP: u8 = 6;
 const TCPF_ALL: u32 = 0xFFF;
 
@@ -79,9 +79,22 @@ struct InetDiagMsg {
     inode:    u32,
 }
 
-/// Query all TCP connections and return per-connection stats.
-/// Returns an empty Vec (not an error) if the socket cannot be created (e.g. no permission).
+/// Query all TCP connections (IPv4 and IPv6) and return per-connection stats.
+///
+/// The IPv4 dump is authoritative for error reporting; the IPv6 dump is
+/// best-effort — on v6-disabled hosts it fails with EAFNOSUPPORT and must not
+/// take the sampler down. The InetDiagReqV2/InetDiagMsg layouts are
+/// family-independent (src/dst are already [u32; 4]), so parsing is shared.
 pub fn query_tcp_connections() -> io::Result<Vec<TcpStats>> {
+    let mut out = query_family(AF_INET)?;
+    match query_family(AF_INET6) {
+        Ok(mut v6) => out.append(&mut v6),
+        Err(e) => tracing::debug!(error = %e, "inet_diag: IPv6 dump unavailable"),
+    }
+    Ok(out)
+}
+
+fn query_family(family: u8) -> io::Result<Vec<TcpStats>> {
     let fd = unsafe {
         libc::socket(
             libc::AF_NETLINK,
@@ -96,11 +109,11 @@ pub fn query_tcp_connections() -> io::Result<Vec<TcpStats>> {
     use std::os::fd::AsRawFd;
     let fd = owned.as_raw_fd();
 
-    send_dump_request(fd)?;
+    send_dump_request(fd, family)?;
     recv_connections(fd)
 }
 
-fn send_dump_request(fd: libc::c_int) -> io::Result<()> {
+fn send_dump_request(fd: libc::c_int, family: u8) -> io::Result<()> {
     // Allocate the full message on the stack
     let hdr_len = std::mem::size_of::<NlMsgHdr>();
     let req_len = std::mem::size_of::<InetDiagReqV2>();
@@ -118,7 +131,7 @@ fn send_dump_request(fd: libc::c_int) -> io::Result<()> {
     let req = unsafe {
         &mut *(buf[hdr_len..].as_mut_ptr() as *mut InetDiagReqV2)
     };
-    req.family   = AF_INET;
+    req.family   = family;
     req.protocol = IPPROTO_TCP;
     req.ext      = 1 << (INET_DIAG_INFO - 1); // request tcp_info extension
     req.pad      = 0;
@@ -167,7 +180,21 @@ fn recv_connections(fd: libc::c_int) -> io::Result<Vec<TcpStats>> {
 
             match hdr.typ {
                 NLMSG_DONE  => return Ok(out),
-                NLMSG_ERROR => return Err(io::Error::other("netlink error response")),
+                NLMSG_ERROR => {
+                    // nlmsgerr starts with a negative errno; surface it so
+                    // callers can distinguish EPERM from ENOENT (module not
+                    // loaded) from EAFNOSUPPORT (IPv6 disabled).
+                    let payload = &buf[pos + std::mem::size_of::<NlMsgHdr>()..len];
+                    let errno = payload
+                        .get(..4)
+                        .map(|b| i32::from_ne_bytes(b.try_into().unwrap()))
+                        .unwrap_or(0);
+                    return Err(if errno < 0 {
+                        io::Error::from_raw_os_error(-errno)
+                    } else {
+                        io::Error::other("netlink error response")
+                    });
+                }
                 SOCK_DIAG_BY_FAMILY => {
                     let payload = &buf[pos + std::mem::size_of::<NlMsgHdr>()..pos + msg_len];
                     if let Some(s) = parse_diag_msg(payload) {

@@ -1,5 +1,8 @@
 /target
 *.log
 *.pid
-throughput_report.html
+# Generated analysis/report pages at repo root (throughput reports,
+# presentations) — never commit these.
+/*.html
 .mcp.json
+.venv/

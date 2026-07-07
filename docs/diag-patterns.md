@@ -225,3 +225,178 @@ Yields 0..N where N is the number of CPUs the cgroup had threads on — total wa
 | High off-CPU, paired with `cgroup_cpu_throttled` rising | Quota throttling is the off-CPU cause |
 | High off-CPU, paired with high steal | Host preemption is part of the off-CPU cause |
 | High off-CPU, none of the above | Self-induced blocking — application logic, lock contention. Profiling territory |
+
+## MTU troubleshooting — finding the path MTU and the bottleneck hop
+
+Use this pattern when:
+- Enabling jumbo frames (MTU 9000) *decreased* throughput or increased retransmits
+- Throughput is unexpectedly low and you suspect per-packet CPU overhead (MTU 1500 on a 100G+ link)
+- You want to find the maximum MTU the full end-to-end path can carry without dropping or fragmenting
+
+### Signal: jumbo frames hurt instead of help
+
+The canonical indicator of a path MTU mismatch is retransmits rising (not falling) after increasing MTU, with CWND shrinking in response. RTT may improve (fewer packets → less NIC interrupt overhead) but throughput regresses because TCP cubic responds to the added loss events with window reduction.
+
+| nyquist signal | Interpretation |
+|---|---|
+| `tcp_retrans_segs` rate increases after MTU change | Frames larger than the path supports are being silently dropped somewhere in the fabric |
+| `tcp_retrans_segs` elevated, `tcp_drop_*` flat | Drops are mid-path, not local — local drops would show in `tcp_drop_rcvq`/`tcp_drop_backlog` |
+| CWND (from `xfr --json`, `ss -tni`, or `tcp_info`) shrinks with larger MTU | TCP cubic has detected losses and backed off the congestion window |
+| RTT improves but throughput regresses | NIC overhead reduced, but path loss rate increased — net negative |
+| p99.9 RX variance widens | Larger frames make individual loss events more impactful; each retransmit is a bigger hole in the receive stream |
+
+### Step 1 — Establish local MTU on all relevant interfaces
+
+```bash
+ip link show                          # check all interfaces
+ip link show <iface>                  # confirm specific interface MTU
+ethtool <iface> | grep -i mtu         # driver-reported max MTU capability
+```
+
+Expected: local interface MTU matches what you set. If not, the driver may not support jumbo frames (`ethtool` will report `Max MTU` < 9000).
+
+### Step 2 — Probe the path MTU with binary search
+
+Use ICMP with the DF (Don't Fragment) bit set. The kernel will receive an ICMP "Fragmentation Needed" message from the first hop that can't forward the packet — this is the bottleneck.
+
+**IPv4:**
+```bash
+# ping with DF bit; payload size = MTU - 28 (20 IP + 8 ICMP headers)
+ping -M do -s 8972 <peer_ipv4>        # tests MTU 9000
+ping -M do -s 1472 <peer_ipv4>        # tests MTU 1500 (baseline)
+```
+
+**IPv6 (no fragmentation in the protocol; all hops must forward or drop):**
+```bash
+ping6 -M do -s 8952 <peer_ipv6>       # tests MTU 9000 (IPv6 header = 40 bytes)
+ping6 -M do -s 1452 <peer_ipv6>       # tests MTU 1500 baseline
+```
+
+Interpret the result:
+- **Succeeds** → that MTU is supported end-to-end
+- **`Message too long` / `Frag needed`** → a hop on the path cannot forward this size; the ICMP error will contain the hop's MTU limit
+- **Timeout (no ICMP error back)** → a firewall is blocking ICMP unreachables — use `tracepath` instead (Step 3)
+
+**Binary search for max MTU** (automate this loop):
+```bash
+# Finds the largest MTU the path accepts (IPv6 example)
+lo=1280; hi=9000
+while [ $((hi - lo)) -gt 1 ]; do
+  mid=$(( (lo + hi) / 2 ))
+  payload=$(( mid - 40 ))   # subtract IPv6 header
+  if ping6 -M do -c 1 -W 1 -s $payload <peer_ipv6> &>/dev/null; then
+    lo=$mid
+  else
+    hi=$mid
+  fi
+done
+echo "Path MTU: $lo"
+```
+
+This converges in ≤13 iterations across the 1280–9000 range.
+
+### Step 3 — Locate the bottleneck hop
+
+If the binary search finds a path MTU below your NIC's MTU, `tracepath` will identify which hop imposed the limit:
+
+```bash
+tracepath <peer_ipv4>                 # walks hops, reports MTU at each
+tracepath6 <peer_ipv6>
+```
+
+Look for the hop where the reported MTU drops. That's the device (switch, router, or tunnel endpoint) that needs configuration.
+
+If `tracepath` is unavailable or the path blocks probes, use `traceroute` with large UDP packets:
+```bash
+traceroute -F -m 30 --sendsize 8972 <peer_ipv4>
+```
+
+Hops that return `!F` (fragmentation needed) or time out immediately after a successful smaller-size hop are the bottleneck.
+
+### Step 4 — Verify NIC and switch configuration
+
+Once you know which hop is limiting, check the device:
+
+**Local NIC:**
+```bash
+ethtool <iface> | grep -i "max mtu\|jumbo"
+ip link set dev <iface> mtu 9000      # set jumbo
+```
+
+**Switch port (if you have access):**
+- Cisco: `show interface <port> | include MTU`; set with `mtu 9216` under the interface
+- Arista/EOS: `show interfaces <port> | grep MTU`; `mtu 9214` under interface config
+- Mellanox/NVIDIA: `show interfaces ethernet <port> | include MTU`
+- The switch's *system MTU* must also be raised, not just the port MTU
+
+**Peer host:**
+```bash
+ssh <peer> ip link show <iface>       # confirm peer MTU matches
+ssh <peer> sysctl net.ipv4.tcp_mtu_probing   # should be 1 (enabled) or 2 (forced)
+```
+
+### Step 5 — Enable TCP MTU probing as a safety net
+
+Even with PMTUD working, black-hole routers that drop oversized packets without returning ICMP unreachables will cause silent stalls. MTU probing (RFC 4821) detects and works around these:
+
+```bash
+sysctl -w net.ipv4.tcp_mtu_probing=1   # 0=off, 1=on-when-stalled, 2=always
+```
+
+With `tcp_mtu_probing=1`, TCP will fall back to MTU 536 if it detects a black hole and probe upward. Prefer `=1` over `=2` (always probe adds overhead on clean paths).
+
+### Step 6 — Correlate with nyquist after fix
+
+After adjusting the bottleneck hop, re-run the load test and compare:
+
+```sql
+-- Retransmit rate before and after: should drop toward zero
+SELECT toStartOfInterval(ts, INTERVAL 10 second) AS t,
+       max(p99) AS retrans_p99
+FROM nyquist_live.samples
+WHERE name = 'tcp_retrans_segs'
+ORDER BY t
+
+-- TX throughput: should increase with larger MTU on a clean path
+SELECT toStartOfInterval(ts, INTERVAL 10 second) AS t,
+       round(max(p99)*8/1e9, 2) AS tx_gbps
+FROM nyquist_live.samples
+WHERE name = 'network_transmit_bytes' AND tags['iface'] = '<iface>'
+ORDER BY t
+```
+
+A successful MTU increase on a clean path produces: retransmits near zero, RTT down 20–40%, TX throughput up 5–15% (less CPU overhead per byte), and p99.9 RX variance narrows.
+
+### Decision tree
+
+```
+Jumbo frames enabled but throughput regressed or retransmits rose?
+│
+├─ ping6 -M do -s 8952 <peer> fails or returns "Message too long"
+│   ├─ tracepath6 shows hop with MTU < 9000
+│   │   └─► Configure that switch/router port for jumbo frames
+│   └─ tracepath6 times out at a hop (black hole)
+│       └─► sysctl net.ipv4.tcp_mtu_probing=1 ; contact network team
+│
+├─ ping6 -M do -s 8952 succeeds (path supports MTU 9000)
+│   ├─ Peer host ip link shows MTU < 9000
+│   │   └─► Set peer MTU: ip link set dev <iface> mtu 9000
+│   └─ Both ends 9000 but retransmits still elevated
+│       └─► Likely NIC driver or firmware issue; check ethtool -k <iface>
+│           for LRO/GRO state; try ethtool -K <iface> lro off
+│
+└─ Using MTU 1500 and throughput is below line rate with high softirq?
+    └─► See "MTU / packet-rate overhead" section above
+        MTU 9000 reduces packets/s by 6× — enable if path supports it
+```
+
+### Real-world example (this system, 2026-06-24)
+
+MTU was raised from 1500 → 9000 on `ens1f0np0`. A 120s bidir xfr test showed:
+
+- TX regressed: 63.46 → 58.56 Gbps (−7.7%)
+- Retransmits increased: ~2/120s → 9/120s (+350%)
+- CWND shrank: 3.74 MB → 2.34 MB/stream
+- RTT improved: 699 → 478 µs (−32%) — the NIC overhead benefit was real
+
+Diagnosis: path does not fully support MTU 9000. The RTT improvement confirms the NIC side is happy, but a fabric hop is silently dropping oversized frames. Run Steps 2–4 to find which switch port needs `mtu 9216` configured.

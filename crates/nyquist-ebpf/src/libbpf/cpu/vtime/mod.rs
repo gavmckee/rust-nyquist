@@ -56,7 +56,13 @@ impl CpuVtime {
         let ids = (0..cpu_count).map(|cpu| {
             let mut row = [MetricId(0); 4];
             for (slot, &(field, _idx)) in STATES.iter().enumerate() {
-                let labels = Labels::new().insert("cpu", &format!("cpu{cpu}"));
+                // source="ebpf" keeps this kprobe/tracepoint series (nanoseconds)
+                // from colliding with the procfs cpu sampler's identically-named
+                // jiffies series for idle/iowait/irq/softirq. Same MetricId without
+                // it → mixed units overflow the rate histogram. Mirrors cpu/usage.
+                let labels = Labels::new()
+                    .insert("cpu", format!("cpu{cpu}"))
+                    .insert("source", "ebpf");
                 row[slot] = reg.register(
                     MetricDef::new(format!("cpu/usage/{field}"), Kind::Counter)
                         .unit(Unit::Count)
@@ -70,8 +76,9 @@ impl CpuVtime {
 
     fn try_init(&mut self) -> anyhow::Result<()> {
         use std::mem::MaybeUninit;
-        let mut object = MaybeUninit::uninit();
-        let open_skel = skel::ModSkelBuilder::default().open(&mut object)?;
+        // Leaked so the skeleton's borrow of the OpenObject is genuinely 'static.
+        let object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
         loaded.attach()?;
 
@@ -84,8 +91,7 @@ impl CpuVtime {
         let ptr = mmap.as_ptr() as *const u64;
         std::mem::forget(mmap);
 
-        let skel: Box<skel::ModSkel<'static>> =
-            unsafe { std::mem::transmute(Box::new(loaded)) };
+        let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
         self.state = State::Running { _skel: skel, ptr };
         Ok(())
     }

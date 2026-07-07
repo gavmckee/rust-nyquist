@@ -59,3 +59,37 @@ fn perf_config_parses_from_toml() {
     assert_eq!(c.perf.max_cpus, 8);
     assert!(!c.perf.sw_enabled);
 }
+
+#[test]
+fn repo_config_files_load_and_validate() {
+    // Every config file shipped in the repo must parse under
+    // deny_unknown_fields and pass validate() — this is what catches a
+    // renamed key silently falling back to defaults, or a dead section
+    // (like the old [ebpf]) rotting in a shipped config.
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    for f in ["nyquist.toml", "nyquist-dev.toml", "docker/nyquist.toml", "docker/nyquist-host.toml"] {
+        let path = format!("{root}/{f}");
+        let c = Config::load(std::path::Path::new(&path))
+            .unwrap_or_else(|e| panic!("{f} failed to load: {e}"));
+        c.validate().unwrap_or_else(|e| panic!("{f} failed validation: {e}"));
+    }
+}
+
+#[test]
+fn unknown_keys_are_rejected() {
+    let toml = r#"
+        [general]
+        fault_toleran = false
+    "#;
+    assert!(toml::from_str::<Config>(toml).is_err(), "typo'd key silently accepted");
+}
+
+#[test]
+fn zero_interval_fails_validation() {
+    let toml = r#"
+        [samplers.cpu]
+        interval = "0s"
+    "#;
+    let c: Config = toml::from_str(toml).unwrap();
+    assert!(c.validate().is_err(), "zero sampler interval passed validation");
+}
