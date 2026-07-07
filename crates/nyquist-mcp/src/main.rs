@@ -92,7 +92,11 @@ pub struct SqlArgs {
     pub sql: String,
 }
 
-fn default_iface() -> String { "ens1f0np0".to_string() }
+// Overridable without recompiling: NYQUIST_IFACE lets the same binary
+// serve any host. Falls back to the primary fabric NIC.
+fn default_iface() -> String {
+    std::env::var("NYQUIST_IFACE").unwrap_or_else(|_| "ens1f0np0".to_string())
+}
 fn default_minutes() -> u32 { 5 }
 fn default_both() -> String { "both".to_string() }
 fn default_procfs() -> String { "procfs".to_string() }
@@ -103,6 +107,15 @@ fn ok(text: String) -> Result<CallToolResult, ErrorData> {
 }
 fn fail(e: anyhow::Error) -> ErrorData {
     ErrorData::internal_error(e.to_string(), None)
+}
+
+/// Expected number of distinct RSS queues hit by `flows` flows over `total`
+/// queues, assuming a uniform hash: N·(1 − ((N−1)/N)^flows). This is the
+/// yardstick that tells "idle queues are normal for this flow count" apart
+/// from a genuinely broken RSS table — so a formula slip would misdiagnose.
+fn coupon_collector_expected(total: f64, flows: u32) -> f64 {
+    if total <= 0.0 { return 0.0; }
+    total * (1.0 - ((total - 1.0) / total).powi(flows as i32))
 }
 
 /// Escape a string for interpolation inside a single-quoted SQL literal.
@@ -258,7 +271,7 @@ impl NyquistMcp {
                 let total: f64 = cols[2].parse().unwrap_or(0.0);
                 if total > 0.0 {
                     if let Some(f) = a.flows {
-                        let expected = total * (1.0 - ((total - 1.0) / total).powi(f as i32));
+                        let expected = coupon_collector_expected(total, f);
                         extra = format!(
                             "\n# Coupon-collector: with {f} flows over {total:.0} queues, \
                              EXPECTED ~{expected:.0} active; OBSERVED {active:.0}. \
@@ -473,7 +486,22 @@ async fn main() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{esc_sql, forbidden_function};
+    use super::{coupon_collector_expected, esc_sql, forbidden_function};
+
+    #[test]
+    fn coupon_collector_matches_known_points() {
+        // 1 flow over any N queues → exactly 1 active.
+        assert!((coupon_collector_expected(64.0, 1) - 1.0).abs() < 1e-9);
+        // flows == queues → ~63.2% coverage (1 - 1/e) for large N.
+        let e = coupon_collector_expected(1000.0, 1000);
+        assert!((e / 1000.0 - (1.0 - 1.0 / std::f64::consts::E)).abs() < 0.01);
+        // Monotonic in flow count; never exceeds the queue count.
+        let (a, b) = (coupon_collector_expected(64.0, 10), coupon_collector_expected(64.0, 100));
+        assert!(a < b && b <= 64.0);
+        // Degenerate inputs don't NaN/panic.
+        assert_eq!(coupon_collector_expected(0.0, 32), 0.0);
+        assert_eq!(coupon_collector_expected(64.0, 0), 0.0);
+    }
 
     #[test]
     fn esc_sql_escapes_quote_and_backslash() {

@@ -33,21 +33,39 @@ pub fn parse_prometheus_tuples(text: &str) -> BTreeSet<(String, Vec<String>)> {
     for line in text.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') { continue; }
-        // name{labels} value   OR   name value
-        let (head, _value) = match line.rsplit_once(' ') {
-            Some(x) => x,
-            None => continue,
+
+        // A sample line is `name{labels} value [timestamp]`. The head is
+        // everything up to the first whitespace OUTSIDE the label braces —
+        // rsplit_once(' ') mis-split lines carrying the optional trailing
+        // timestamp, and label values can legitimately contain spaces.
+        let head_end = {
+            let (mut in_braces, mut end) = (false, line.len());
+            for (i, c) in line.char_indices() {
+                match c {
+                    '{' => in_braces = true,
+                    '}' => in_braces = false,
+                    ' ' if !in_braces => { end = i; break; }
+                    _ => {}
+                }
+            }
+            end
         };
+        let head = &line[..head_end];
+
         let (name, labels) = match head.split_once('{') {
             Some((n, rest)) => (n, rest.trim_end_matches('}')),
             None => (head, ""),
         };
+        // Strip the synthetic percentile suffix at most ONCE (trim_end_matches
+        // looped, mangling a base name that legitimately ends in _rate/_value).
         let base = name
-            .trim_end_matches("_rate")
-            .trim_end_matches("_value")
+            .strip_suffix("_rate")
+            .or_else(|| name.strip_suffix("_value"))
+            .unwrap_or(name)
             .to_string();
-        let mut keys: Vec<String> = labels
-            .split(',')
+
+        let mut keys: Vec<String> = split_labels(labels)
+            .into_iter()
             .filter_map(|kv| kv.split_once('=').map(|(k, _)| k.trim().to_string()))
             .filter(|k| k != "percentile" && !k.is_empty())
             .collect();
@@ -55,6 +73,21 @@ pub fn parse_prometheus_tuples(text: &str) -> BTreeSet<(String, Vec<String>)> {
         keys.dedup();
         out.insert((base, keys));
     }
+    out
+}
+
+/// Split a Prometheus label list on commas OUTSIDE quotes — a label value
+/// like `device="a,b"` must not split into two keys.
+fn split_labels(labels: &str) -> Vec<&str> {
+    let (mut out, mut in_quotes, mut start) = (Vec::new(), false, 0);
+    for (i, b) in labels.bytes().enumerate() {
+        match b {
+            b'"' => in_quotes = !in_quotes,
+            b',' if !in_quotes => { out.push(&labels[start..i]); start = i + 1; }
+            _ => {}
+        }
+    }
+    if start < labels.len() { out.push(&labels[start..]); }
     out
 }
 
@@ -97,5 +130,26 @@ mem_free_value{} 2048
         assert!(got.contains(&("mem_free".to_string(), vec![])));
         // percentile label never leaks into the key set.
         assert!(got.iter().all(|(_, keys)| !keys.iter().any(|k| k == "percentile")));
+    }
+
+    #[test]
+    fn parser_handles_timestamps_quoted_commas_and_repeated_suffix() {
+        let text = "\
+disk_read_rate{device=\"sda\"} 42 1699999999000\n\
+net_bytes{path=\"a,b\",iface=\"eth0\"} 7\n\
+some_value_value{host=\"h\"} 3\n";
+        let got = parse_prometheus_tuples(text);
+        // Trailing timestamp doesn't corrupt the head; only "_rate" strips
+        // (once), leaving the real base name intact.
+        assert!(got.contains(&("disk_read".to_string(), vec!["device".to_string()])),
+            "timestamp or single-suffix strip failed: {got:?}");
+        // Quoted comma stays inside one label value → two keys, not three.
+        assert!(got.contains(&(
+            "net_bytes".to_string(),
+            vec!["iface".to_string(), "path".to_string()],
+        )), "quoted-comma label split wrong: {got:?}");
+        // "_value" stripped exactly once → "some_value", not "some".
+        assert!(got.contains(&("some_value".to_string(), vec!["host".to_string()])),
+            "repeated-suffix strip mangled base name: {got:?}");
     }
 }

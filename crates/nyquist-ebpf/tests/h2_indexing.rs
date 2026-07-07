@@ -17,6 +17,58 @@ fn round_trip(value: u64) -> (u64, u64) {
     buckets[0]
 }
 
+// Faithful transliteration of value_to_index() from bpf/histogram.h. The C
+// program's indexing MUST agree with the Rust `histogram` crate bucket-for-
+// bucket, or kernel-produced counts land in the wrong buckets when userspace
+// reconstructs them. The existing tests only exercised the crate; nothing
+// guarded the C algorithm — the exact gap that let the `1 << power` int-shift
+// UB (now `1ULL << power`) mis-bucket every value >= 2^31 until it was caught.
+// Kept in sync by eye with the header; the sweep below is the tripwire.
+fn c_value_to_index(value: u64, grouping_power: u8) -> usize {
+    if value < (2u64 << grouping_power) {
+        return value as usize;
+    }
+    let power = 63 - value.leading_zeros() as u64; // 63 - clz(value)
+    let bin = power - grouping_power as u64 + 1;
+    let offset = (value - (1u64 << power)) >> (power - grouping_power as u64);
+    (bin * (1u64 << grouping_power) + offset) as usize
+}
+
+/// The crate's own index for `value`: increment it and return the single
+/// nonzero bucket position. This is value_to_index observed through the
+/// public API (the crate's own fn is pub(crate)).
+fn crate_index(value: u64) -> usize {
+    let mut h = ref_histogram();
+    h.increment(value).unwrap();
+    h.as_slice()
+        .iter()
+        .position(|&c| c > 0)
+        .unwrap_or_else(|| panic!("value={value} produced no nonzero bucket"))
+}
+
+#[test]
+fn c_indexing_matches_the_crate_across_the_range() {
+    // Boundary-heavy sweep: the linear/exponential seam (2^gp), every
+    // power-of-two edge, and crucially the 2^31 region where the int-shift
+    // UB lived. u64::MAX must land in the last bucket (495).
+    let mut values = vec![0u64, 1, 7, 8, 15, 16, 17, 100, 1000, u64::MAX];
+    for p in 3..64 {
+        values.push(1u64 << p);
+        values.push((1u64 << p) - 1);
+        values.push((1u64 << p) + 1);
+    }
+    for &v in &values {
+        let c = c_value_to_index(v, BPF_GROUPING_POWER);
+        let rust = crate_index(v);
+        assert_eq!(
+            c, rust,
+            "C value_to_index({v}, {BPF_GROUPING_POWER}) = {c} but crate = {rust}"
+        );
+    }
+    // The documented endpoint invariant.
+    assert_eq!(c_value_to_index(u64::MAX, BPF_GROUPING_POWER), BPF_BUCKETS - 1);
+}
+
 #[test]
 fn bucket_count_is_496() {
     assert_eq!(BPF_BUCKETS, 496);

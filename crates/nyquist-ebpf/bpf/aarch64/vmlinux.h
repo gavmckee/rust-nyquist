@@ -1,5 +1,9 @@
 #ifndef __VMLINUX_H__
 #define __VMLINUX_H__
+/* PROVENANCE: pinned per-arch CO-RE type snapshot, generated with
+ *   bpftool btf dump file /sys/kernel/btf/vmlinux format c   (arch aarch64)
+ * Regenerate deliberately (never auto): a bad enum/field offset here
+ * silently mis-reads kernel structs. See docs/principles.md #6. */
 
 #ifndef BPF_NO_PRESERVE_ACCESS_INDEX
 #pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record)

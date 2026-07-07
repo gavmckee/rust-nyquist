@@ -16,5 +16,3 @@ tokio = { workspace = true, features = ["rt", "time"] }
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
-[features]
-clickhouse-integration = []
