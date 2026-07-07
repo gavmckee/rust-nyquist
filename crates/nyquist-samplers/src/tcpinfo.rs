@@ -7,11 +7,16 @@ use nyquist_core::sampler::{Sampler, SamplerError};
 
 use crate::inet_diag::{query_tcp_connections, TcpStats};
 
-/// Service port heuristic: the non-ephemeral port (< 49152) is the server side.
+/// Service port heuristic: the non-ephemeral port is the server side.
 /// If both are non-ephemeral, use the lower (server ports are typically smaller).
 /// Returns None if both are ephemeral (direct peer-to-peer, uncommon).
-fn service_port(sport: u16, dport: u16) -> Option<u16> {
-    match (sport < 49152, dport < 49152) {
+///
+/// `ephemeral_floor` comes from net.ipv4.ip_local_port_range (default 32768).
+/// The previous hardcoded 49152 (the IANA dynamic-range start) misclassified
+/// half of Linux's actual ephemeral range as service ports, minting up to
+/// ~16k junk per-port series on busy client hosts.
+fn service_port(sport: u16, dport: u16, ephemeral_floor: u16) -> Option<u16> {
+    match (sport < ephemeral_floor, dport < ephemeral_floor) {
         (true, false)  => Some(sport),
         (false, true)  => Some(dport),
         (true, true)   => Some(sport.min(dport)),
@@ -19,8 +24,17 @@ fn service_port(sport: u16, dport: u16) -> Option<u16> {
     }
 }
 
+/// Lower bound of the kernel's ephemeral port range.
+fn ephemeral_floor() -> u16 {
+    std::fs::read_to_string("/proc/sys/net/ipv4/ip_local_port_range")
+        .ok()
+        .and_then(|s| s.split_whitespace().next().and_then(|t| t.parse().ok()))
+        .unwrap_or(32768)
+}
+
 pub struct TcpInfoSampler {
     interval: Duration,
+    ephemeral_floor: u16,
     rtt_ids:     HashMap<u16, MetricId>,
     retrans_ids: HashMap<u16, MetricId>,
     // inode → (service_port, total_retrans at last sample)
@@ -34,6 +48,7 @@ impl TcpInfoSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
         TcpInfoSampler {
             interval,
+            ephemeral_floor: ephemeral_floor(),
             rtt_ids: HashMap::new(),
             retrans_ids: HashMap::new(),
             prev_retrans: HashMap::new(),
@@ -66,7 +81,10 @@ impl TcpInfoSampler {
         let mut seen_inodes = std::collections::HashSet::new();
 
         for c in &conns {
-            let Some(port) = service_port(c.sport, c.dport) else { continue };
+            // TIME_WAIT/SYN sockets report inode 0 and carry no meaningful
+            // tcp_info; they would all share one key in prev_retrans.
+            if c.inode == 0 { continue; }
+            let Some(port) = service_port(c.sport, c.dport, self.ephemeral_floor) else { continue };
             seen_inodes.insert(c.inode);
 
             // RTT histogram
@@ -75,17 +93,17 @@ impl TcpInfoSampler {
                 reg.record_gauge(id, now, c.rtt_us as u64);
             }
 
-            // Retransmit delta tracking
-            let delta = if let Some(&(prev_port, prev_count)) = self.prev_retrans.get(&c.inode) {
-                if prev_port == port && c.total_retrans >= prev_count {
+            // Retransmit delta tracking. First sight of a connection (agent
+            // start, or inode reuse) only baselines: booking its lifetime
+            // total_retrans as one interval's delta produced a bogus rate
+            // spike at every agent restart.
+            let delta = match self.prev_retrans.get(&c.inode) {
+                Some(&(prev_port, prev_count))
+                    if prev_port == port && c.total_retrans >= prev_count =>
+                {
                     c.total_retrans - prev_count
-                } else {
-                    // connection reused inode or port mismatch: treat as fresh
-                    c.total_retrans
                 }
-            } else {
-                // New connection: count its full history on first sight
-                c.total_retrans
+                _ => 0,
             };
             self.prev_retrans.insert(c.inode, (port, c.total_retrans));
 
@@ -122,11 +140,17 @@ impl Sampler for TcpInfoSampler {
             }
             Err(e) => {
                 let raw = e.raw_os_error().unwrap_or(0);
-                // EPERM/EACCES: disable permanently rather than spamming errors
-                if raw == libc::EPERM || raw == libc::EACCES {
+                // Permanent conditions: no permission, inet_diag/tcp_diag
+                // module absent (minimal container kernels), family
+                // unsupported. Disable rather than warn-spamming every tick.
+                if matches!(
+                    raw,
+                    libc::EPERM | libc::EACCES | libc::ENOENT
+                        | libc::EPROTONOSUPPORT | libc::EAFNOSUPPORT
+                ) {
                     tracing::warn!(
                         error = %e,
-                        "tcpinfo: INET_DIAG query failed (no permission), disabling sampler"
+                        "tcpinfo: INET_DIAG query failed permanently, disabling sampler"
                     );
                     self.disabled = true;
                     Ok(())
@@ -144,10 +168,15 @@ mod tests {
 
     #[test]
     fn service_port_heuristic() {
-        assert_eq!(service_port(80, 54321), Some(80));    // server at 80
-        assert_eq!(service_port(54321, 443), Some(443));  // client to 443
-        assert_eq!(service_port(22, 9100), Some(22));     // both registered, lower wins
-        assert_eq!(service_port(54321, 60000), None);     // both ephemeral
+        const FLOOR: u16 = 32768; // Linux default ip_local_port_range lower bound
+        assert_eq!(service_port(80, 54321, FLOOR), Some(80));    // server at 80
+        assert_eq!(service_port(54321, 443, FLOOR), Some(443));  // client to 443
+        assert_eq!(service_port(22, 9100, FLOOR), Some(22));     // both registered, lower wins
+        assert_eq!(service_port(54321, 60000, FLOOR), None);     // both ephemeral
+        // Regression: 32768-49151 is ephemeral on Linux; the old hardcoded
+        // 49152 floor classified 40000 as a service port.
+        assert_eq!(service_port(40000, 443, FLOOR), Some(443));
+        assert_eq!(service_port(40000, 45000, FLOOR), None);
     }
 
     #[test]
@@ -170,9 +199,23 @@ mod tests {
         ];
         s.process(&reg, now2, conns2);
 
-        // Total retransmits for port 80: initial(5+0) + delta(3+1) = 9
+        // First sight only baselines (inode 1's pre-existing 5 retransmits are
+        // history, not this window's rate); deltas after that count: 3 + 1 = 4.
         let id = s.retrans_id(&reg, 80);
-        assert_eq!(reg.raw(id), 9);
+        assert_eq!(reg.raw(id), 4);
+    }
+
+    #[test]
+    fn inode_zero_sockets_are_skipped() {
+        // TIME_WAIT/SYN entries all report inode 0; they must not alias into
+        // one shared retransmit-tracking slot or record bogus RTT.
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
+        let mut s = TcpInfoSampler::new(&reg, Duration::from_millis(10));
+        let now = Instant::now();
+        s.process(&reg, now, vec![
+            TcpStats { sport: 80, dport: 54000, inode: 0, rtt_us: 1000, total_retrans: 5 },
+        ]);
+        assert!(reg.metric_ids().is_empty(), "inode-0 socket registered metrics");
     }
 }
 

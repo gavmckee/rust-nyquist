@@ -4,13 +4,13 @@ use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
 use crate::procfs::parse_proc_stat;
 
-const FIELDS: [&str; 7] = ["user", "nice", "system", "idle", "iowait", "irq", "softirq"];
+const FIELDS: [&str; 8] = ["user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal"];
 
 pub struct CpuSampler {
     interval: Duration,
     path: String,
     // ids[cpu_row][field_index]: populated on first sample; reused every subsequent tick.
-    ids: Vec<[MetricId; 7]>,
+    ids: Vec<[MetricId; 8]>,
 }
 
 impl CpuSampler {
@@ -22,7 +22,7 @@ impl CpuSampler {
         let cpus = parse_proc_stat(text);
         if self.ids.len() != cpus.len() {
             self.ids = cpus.iter().map(|(cpu, _)| {
-                let mut row = [MetricId(0); 7];
+                let mut row = [MetricId(0); 8];
                 for (i, &field) in FIELDS.iter().enumerate() {
                     let labels = Labels::new().insert("cpu", cpu.as_str());
                     row[i] = reg.register(
@@ -65,7 +65,8 @@ mod tests {
         let t0 = Instant::now();
         s.ingest(&reg, t0, text);
         s.ingest(&reg, t0 + Duration::from_millis(10), text);
-        assert_eq!(reg.metric_ids().len(), 21);
+        // 3 cpu rows x 8 fields (incl. steal)
+        assert_eq!(reg.metric_ids().len(), 24);
     }
 }
 
