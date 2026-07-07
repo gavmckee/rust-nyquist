@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 use async_trait::async_trait;
 use clickhouse::Client;
 use nyquist_core::sink::{Sink, SinkError};
@@ -12,18 +12,15 @@ pub struct ClickHouseSink {
     /// Database-scoped client — used for all table operations.
     client:          Client,
     database:        String,
-    insert_interval: Duration,
-    last_insert:     Instant,
     initialized:     bool,
 }
 
 impl ClickHouseSink {
     pub fn new(
-        url:             &str,
-        database:        &str,
-        username:        &str,
-        password:        &str,
-        insert_interval: Duration,
+        url:      &str,
+        database: &str,
+        username: &str,
+        password: &str,
     ) -> Self {
         let base = Client::default()
             .with_url(url)
@@ -38,8 +35,6 @@ impl ClickHouseSink {
             base,
             client,
             database: database.to_string(),
-            insert_interval,
-            last_insert:  Instant::now(),
             initialized:  false,
         }
     }
@@ -75,11 +70,9 @@ impl Sink for ClickHouseSink {
             tracing::warn!(error = %e, "clickhouse: schema init failed, skipping export");
             return Err(e);
         }
-        if self.last_insert.elapsed() < self.insert_interval {
-            return Ok(());
-        }
-        self.last_insert = Instant::now();
-
+        // No interval gate here: spawn_sink's ticker already fires at exactly
+        // insert_interval. A second elapsed() check raced the ticker's wake
+        // jitter and silently skipped whole windows (including the first tick).
         let ts_ms = snapshot.captured
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()

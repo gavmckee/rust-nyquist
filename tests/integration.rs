@@ -40,7 +40,6 @@ async fn recorder_sink_writes_parquet_file() {
     let mut sink = RecorderSink::new(
         dir.path().to_path_buf(),
         Duration::from_secs(3600),
-        Duration::ZERO,
     ).unwrap();
 
     let snapshot = RegistrySnapshot {

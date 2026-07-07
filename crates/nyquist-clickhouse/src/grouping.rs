@@ -1,18 +1,18 @@
-/// DDL helpers for the narrow (tall) ClickHouse schema.
-///
-/// Every metric, regardless of sampler, goes into a single `samples` table.
-/// Labels are stored in a Map column so the schema never needs migration when
-/// new labels are added (new interfaces, queues, CPUs, etc.).
-///
-/// Schema:
-///   ts    DateTime64(3)       – unix epoch milliseconds
-///   name  LowCardinality(String) – metric name with '/' replaced by '_'
-///   tags  Map(LowCardinality(String), String) – all labels
-///   raw   UInt64              – latest raw counter / gauge value
-///   p50   UInt64              – 50th percentile over the sliding window
-///   p90   UInt64              – 90th percentile
-///   p99   UInt64              – 99th percentile
-///   p999  UInt64              – 99.9th percentile
+//! DDL helpers for the narrow (tall) ClickHouse schema.
+//!
+//! Every metric, regardless of sampler, goes into a single `samples` table.
+//! Labels are stored in a Map column so the schema never needs migration when
+//! new labels are added (new interfaces, queues, CPUs, etc.).
+//!
+//! Schema:
+//!   ts    DateTime64(3)       – unix epoch milliseconds
+//!   name  LowCardinality(String) – metric name with '/' replaced by '_'
+//!   tags  Map(LowCardinality(String), String) – all labels
+//!   raw   UInt64              – latest raw counter / gauge value
+//!   p50   UInt64              – 50th percentile over the sliding window
+//!   p90   UInt64              – 90th percentile
+//!   p99   UInt64              – 99th percentile
+//!   p999  UInt64              – 99.9th percentile
 
 pub const TABLE: &str = "samples";
 

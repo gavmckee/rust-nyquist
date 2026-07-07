@@ -1,29 +1,29 @@
 use std::path::PathBuf;
-use std::time::{Duration, Instant, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 use async_trait::async_trait;
 use nyquist_core::sink::{Sink, SinkError};
 use nyquist_core::snapshot::RegistrySnapshot;
 use crate::schema::RowAccumulator;
 use crate::writer::{ParquetWriter, RecorderError};
 
+/// Retry ceiling: rows are retained across failed flushes (disk full,
+/// permission flap) but must not grow without bound if the disk never
+/// recovers. ~2k metrics x a few hundred retained snapshots.
+const MAX_BUFFERED_ROWS: usize = 500_000;
+
 pub struct RecorderSink {
-    writer:         ParquetWriter,
-    acc:            RowAccumulator,
-    flush_interval: Duration,
-    last_flush:     Instant,
+    writer: ParquetWriter,
+    acc:    RowAccumulator,
 }
 
 impl RecorderSink {
     pub fn new(
         output_dir:        PathBuf,
         rotation_interval: Duration,
-        flush_interval:    Duration,
     ) -> Result<Self, RecorderError> {
         Ok(RecorderSink {
-            writer:     ParquetWriter::new(output_dir, rotation_interval)?,
-            acc:        RowAccumulator::new(),
-            flush_interval,
-            last_flush: Instant::now(),
+            writer: ParquetWriter::new(output_dir, rotation_interval)?,
+            acc:    RowAccumulator::new(),
         })
     }
 }
@@ -31,18 +31,32 @@ impl RecorderSink {
 #[async_trait]
 impl Sink for RecorderSink {
     async fn export(&mut self, snapshot: &RegistrySnapshot) -> Result<(), SinkError> {
+        // No interval gate here: spawn_sink's ticker already fires at exactly
+        // the configured flush_interval (see the identical fix in the
+        // ClickHouse sink — a second elapsed() check races wake jitter).
         let ts_ms = snapshot.captured
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as i64;
+        if self.acc.len() > MAX_BUFFERED_ROWS {
+            tracing::warn!(
+                dropped = self.acc.len(),
+                "recorder buffer cap hit after repeated write failures; dropping retained rows"
+            );
+            self.acc.clear();
+        }
         for m in &snapshot.metrics {
             self.acc.push(ts_ms, m);
         }
-        if self.last_flush.elapsed() >= self.flush_interval {
-            self.writer.maybe_rotate()?;
-            self.writer.flush(&mut self.acc)?;
-            self.last_flush = Instant::now();
-        }
+        self.writer.maybe_rotate()?;
+        self.writer.flush(&mut self.acc)?;
+        Ok(())
+    }
+
+    async fn flush(&mut self) -> Result<(), SinkError> {
+        // Shutdown path: write out anything still buffered (rows retained
+        // from a failed export, or pushed since the last tick).
+        self.writer.flush(&mut self.acc)?;
         Ok(())
     }
 }
@@ -89,7 +103,6 @@ mod tests {
         let mut sink = RecorderSink::new(
             dir.path().to_path_buf(),
             Duration::from_secs(3600),
-            Duration::ZERO,
         ).unwrap();
         sink.export(&make_snapshot(ts)).await.unwrap();
         let files: Vec<_> = std::fs::read_dir(dir.path()).unwrap()

@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use super::slice::{HistogramSlice, empty_accumulator, percentile as compute_percentile};
+use super::slice::{DEFAULT_SAMPLES_PER_SLICE, HistogramSlice, empty_accumulator, percentile as compute_percentile};
 
 /// A ring of histogram slices forming a sliding time window.
 /// Slices are allocated lazily on first write; an empty histogram costs only the ring metadata.
@@ -8,17 +8,26 @@ pub struct SlidingHistogram {
     slice_index: Vec<Option<u64>>,
     slice_width: Duration,
     n_slices: usize,
+    samples_per_slice: usize,
     origin: Option<Instant>,
 }
 
 impl SlidingHistogram {
     pub fn new(slice_width: Duration, window: Duration) -> Self {
+        Self::with_capacity(slice_width, window, DEFAULT_SAMPLES_PER_SLICE)
+    }
+
+    /// `samples_per_slice` caps how many raw samples one slice retains; size it
+    /// from slice_width / fastest-tick-interval or fast samplers get truncated
+    /// with temporal bias (only the head of each slice survives).
+    pub fn with_capacity(slice_width: Duration, window: Duration, samples_per_slice: usize) -> Self {
         let n_slices = (window.as_nanos() / slice_width.as_nanos()).max(1) as usize;
         SlidingHistogram {
             slices: (0..n_slices).map(|_| None).collect(),
             slice_index: vec![None; n_slices],
             slice_width,
             n_slices,
+            samples_per_slice,
             origin: None,
         }
     }
@@ -37,8 +46,9 @@ impl SlidingHistogram {
             self.slices[cell] = None;
             self.slice_index[cell] = Some(abs);
         }
+        let cap = self.samples_per_slice;
         self.slices[cell]
-            .get_or_insert_with(HistogramSlice::new)
+            .get_or_insert_with(|| HistogramSlice::new(cap))
             .record(value);
     }
 

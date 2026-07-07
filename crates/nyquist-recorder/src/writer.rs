@@ -51,20 +51,38 @@ impl ParquetWriter {
 
     /// Write all buffered rows to a new complete Parquet file and clear the buffer.
     /// If the accumulator is empty, this is a no-op.
+    ///
+    /// The file is written to a `.tmp` name, fsync'd, then atomically renamed:
+    /// directory scanners never observe a torn Parquet file, and a crash
+    /// mid-write leaves only an ignorable `.tmp`, not a corrupt final file.
+    /// Rows are cleared only after the rename, so any error keeps them
+    /// buffered for the next flush attempt.
     pub fn flush(&mut self, acc: &mut RowAccumulator) -> Result<(), RecorderError> {
         if acc.is_empty() { return Ok(()); }
-        let batch = acc.drain();
-        let path = self.output_dir.join(
-            format!("nyquist-{}-{}.parquet", self.rotation_ts_ms, self.seq)
-        );
-        self.seq += 1;
-        let file = std::fs::File::create(&path)?;
+        let batch = acc.to_batch();
+        let name = format!("nyquist-{}-{}.parquet", self.rotation_ts_ms, self.seq);
+        let final_path = self.output_dir.join(&name);
+        let tmp_path = self.output_dir.join(format!("{name}.tmp"));
+
+        let file = std::fs::File::create(&tmp_path)?;
+        // Second handle to the same file description, for fsync after the
+        // ArrowWriter consumes the first.
+        let sync_handle = file.try_clone()?;
         let props = WriterProperties::builder()
             .set_compression(Compression::SNAPPY)
             .build();
         let mut writer = ArrowWriter::try_new(file, nyquist_schema(), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
+        sync_handle.sync_all()?;
+        fs::rename(&tmp_path, &final_path)?;
+        // fsync the directory so the rename itself survives power loss.
+        if let Ok(dir) = fs::File::open(&self.output_dir) {
+            let _ = dir.sync_all();
+        }
+
+        self.seq += 1;
+        acc.clear();
         Ok(())
     }
 }
