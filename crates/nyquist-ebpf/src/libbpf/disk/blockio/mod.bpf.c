@@ -3,9 +3,9 @@
 // Principle 2: counters and latency histogram are in BPF_F_MMAPABLE ARRAYs;
 //   userspace reads via mmap — no bpf_map_lookup_elem on the hot path.
 // Principle 8: counters/latency are ARRAY-indexed by device slot.
-//   devt_to_slot is a HASH with documented sparse-key exception: dev_t is not a
-//   dense bounded integer (sparse major/minor space), analogous to the sock*
-//   exception in tcp/packet_latency.
+//   name_to_slot is a HASH with documented sparse-key exception: disk names
+//   are not dense bounded integers; see the map comment for why names (not
+//   dev_t) are the key. Analogous to the sock* exception in tcp/packet_latency.
 #include <vmlinux.h>
 #include "helpers.h"
 #include <bpf/bpf_helpers.h>
@@ -17,16 +17,27 @@
 #define HISTOGRAM_BUCKETS   HISTOGRAM_BUCKETS_POW_3
 #define HISTOGRAM_POWER     3
 
-// devt_to_slot: dev_t (u32) → device slot (u32, 0..MAX_DEVICES-1).
+#define DISK_NAME_LEN 32
+
+struct disk_name {
+    char name[DISK_NAME_LEN];
+};
+
+// name_to_slot: gendisk disk_name → device slot (u32, 0..MAX_DEVICES-1).
 // Populated by userspace at sampler init; read-only in the hot path.
-// Sparse-key exception: dev_t encodes (major << 20 | minor) and is not
-// suitable as a direct array index.
+// Keyed by NAME, not dev_t: with NVMe native multipath, requests complete
+// on the HIDDEN per-controller device (e.g. nvme0c0n1, dev 259:0), whose
+// dev_t is not discoverable from userspace (no /sys dev file, absent from
+// /sys/dev/block) — a devt-keyed map missed every real I/O on such hosts.
+// disk_name is stable, names the whole disk even for partition I/O, and
+// userspace can alias hidden multipath component names to their head.
+// Sparse-key exception: a string key is not a dense bounded integer.
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, 1024);
-    __type(key, u32);
+    __type(key, struct disk_name);
     __type(value, u32);
-} devt_to_slot SEC(".maps");
+} name_to_slot SEC(".maps");
 
 // counters[slot * COUNTER_GROUP_WIDTH + type]:
 //   0 — read_bytes
@@ -57,11 +68,16 @@ struct {
 SEC("raw_tp/block_rq_complete")
 int BPF_PROG(block_rq_complete, struct request *rq, int error,
              unsigned int nr_bytes) {
+    // part is NULL for passthrough/admin commands (NVMe health polls etc.).
     struct block_device *part = BPF_CORE_READ(rq, part);
     if (!part) return 0;
 
-    dev_t devt = BPF_CORE_READ(part, bd_dev);
-    u32 *slot_p = bpf_map_lookup_elem(&devt_to_slot, &devt);
+    struct gendisk *disk = BPF_CORE_READ(part, bd_disk);
+    if (!disk) return 0;
+
+    struct disk_name key = {};
+    BPF_CORE_READ_STR_INTO(&key.name, disk, disk_name);
+    u32 *slot_p = bpf_map_lookup_elem(&name_to_slot, &key);
     if (!slot_p) return 0;
     u32 slot = *slot_p;
     if (slot >= MAX_DEVICES) return 0;

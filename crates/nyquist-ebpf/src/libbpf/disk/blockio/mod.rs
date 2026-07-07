@@ -50,10 +50,10 @@ pub struct BlockIo {
 
 impl BlockIo {
     pub fn new(reg: &Registry, interval: Duration) -> Self {
-        let devices = enumerate_block_devices()
+        let devices = list_disks()
             .into_iter()
             .take(MAX_DEVICES)
-            .map(|(name, _devts)| {
+            .map(|name| {
                 // source="ebpf" so these since-agent-start counters do NOT
                 // collide with the procfs disk sampler's identically-named
                 // since-boot series. Without it both hash to the same MetricId
@@ -85,15 +85,23 @@ impl BlockIo {
         let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
 
-        // Populate devt_to_slot before attaching so no events are missed.
-        // Partition dev_ts map to the parent disk's slot so partition I/O is
-        // attributed to the correct disk (most system I/O is to partitions).
-        let devt_map = &loaded.maps.devt_to_slot;
-        for (slot, (_name, all_devts)) in enumerate_block_devices().into_iter().take(MAX_DEVICES).enumerate() {
-            for devt in all_devts {
-                let key = (devt as u32).to_ne_bytes();
-                let val = (slot as u32).to_ne_bytes();
-                devt_map.update(&key, &val, MapFlags::ANY)?;
+        // Populate name_to_slot before attaching so no events are missed.
+        // Keys are gendisk names (the BPF program reads rq->part->bd_disk->
+        // disk_name, which names the whole disk even for partition I/O).
+        // Slots come from the SAME device list registration used, so names
+        // and MetricIds can never skew (a second enumeration here used to
+        // race device hotplug).
+        let name_map = &loaded.maps.name_to_slot;
+        for (slot, (name, _ids)) in self.devices.iter().enumerate() {
+            name_map.update(&disk_name_key(name), &(slot as u32).to_ne_bytes(), MapFlags::ANY)?;
+        }
+        // NVMe native multipath: real I/O completes on HIDDEN per-controller
+        // component disks (nvme0c0n1) rather than the visible head (nvme0n1).
+        // Alias each component name to its head's slot so those completions
+        // are attributed to the device operators actually see.
+        for (component, head) in hidden_multipath_components() {
+            if let Some(slot) = self.devices.iter().position(|(n, _)| *n == head) {
+                name_map.update(&disk_name_key(&component), &(slot as u32).to_ne_bytes(), MapFlags::ANY)?;
             }
         }
 
@@ -172,53 +180,92 @@ impl Sampler for BlockIo {
     }
 }
 
-/// Return (device_name, [disk_devt, partition_devts…]) for all physical block
-/// devices under /sys/block. Partition dev_ts share the parent's slot so that
-/// I/O issued to any partition of a disk is attributed to the disk.
-fn enumerate_block_devices() -> Vec<(String, Vec<u64>)> {
-    let Ok(dir) = std::fs::read_dir("/sys/block") else { return Vec::new() };
-    let mut devices = Vec::new();
-    for entry in dir.flatten() {
-        let name = entry.file_name().into_string().unwrap_or_default();
-        if name.is_empty()
-            || name.starts_with("loop")
-            || name.starts_with("ram")
-            || name.starts_with("zram")
-        {
-            continue;
-        }
-        let dev_path = format!("/sys/block/{name}/dev");
-        let Ok(content) = std::fs::read_to_string(&dev_path) else { continue };
-        let Ok(disk_devt) = parse_devt(content.trim()) else { continue };
-
-        let mut all_devts = vec![disk_devt];
-        // Include partition dev_ts so block_rq_complete events for partitions
-        // (the common case for filesystem I/O) resolve to the parent disk slot.
-        if let Ok(subdir) = std::fs::read_dir(format!("/sys/block/{name}")) {
-            for sub in subdir.flatten() {
-                let sub_name = sub.file_name().into_string().unwrap_or_default();
-                if !sub_name.starts_with(name.as_str()) { continue; }
-                let part_dev = format!("/sys/block/{name}/{sub_name}/dev");
-                if let Ok(c) = std::fs::read_to_string(&part_dev) {
-                    if let Ok(pdevt) = parse_devt(c.trim()) {
-                        all_devts.push(pdevt);
-                    }
-                }
-            }
-        }
-
-        devices.push((name, all_devts));
-    }
-    devices.sort_by(|a, b| a.0.cmp(&b.0));
-    devices
+/// Zero-padded 32-byte key matching the BPF program's `struct disk_name`
+/// (kernel DISK_NAME_LEN = 32, always NUL-terminated).
+fn disk_name_key(name: &str) -> [u8; 32] {
+    let mut key = [0u8; 32];
+    let b = name.as_bytes();
+    let n = b.len().min(31);
+    key[..n].copy_from_slice(&b[..n]);
+    key
 }
 
-fn parse_devt(s: &str) -> Result<u64, ()> {
-    let (maj, min) = s.split_once(':').ok_or(())?;
-    let major: u64 = maj.parse().map_err(|_| ())?;
-    let minor: u64 = min.parse().map_err(|_| ())?;
-    // Linux dev_t: MKDEV(major, minor) = (major << 20) | minor (blkdev extended)
-    Ok((major << 20) | minor)
+/// Visible physical disks under /sys/block (entries with a `dev` file),
+/// sorted for stable slot assignment.
+fn list_disks() -> Vec<String> {
+    let Ok(dir) = std::fs::read_dir("/sys/block") else { return Vec::new() };
+    let mut disks: Vec<String> = dir
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            if name.is_empty()
+                || name.starts_with("loop")
+                || name.starts_with("ram")
+                || name.starts_with("zram")
+            {
+                return None;
+            }
+            // Hidden devices (NVMe multipath components) have no `dev` file;
+            // they are aliased to their head, not given slots of their own.
+            entry.path().join("dev").exists().then_some(name)
+        })
+        .collect();
+    disks.sort();
+    disks
+}
+
+/// Hidden NVMe multipath component disks and the visible head each belongs
+/// to: nvme{ctrl}c{path}n{ns} → nvme{ctrl}n{ns}.
+fn hidden_multipath_components() -> Vec<(String, String)> {
+    let Ok(dir) = std::fs::read_dir("/sys/block") else { return Vec::new() };
+    dir.flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            let head = nvme_multipath_head(&name)?;
+            Some((name, head))
+        })
+        .collect()
+}
+
+/// Parse an NVMe multipath component name (nvme0c0n1) into its head (nvme0n1).
+fn nvme_multipath_head(name: &str) -> Option<String> {
+    let rest = name.strip_prefix("nvme")?;
+    let (ctrl, rest) = rest.split_at(rest.find('c')?);
+    let rest = &rest[1..];
+    let (path, rest) = rest.split_at(rest.find('n')?);
+    let ns = &rest[1..];
+    let all_digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    if all_digits(ctrl) && all_digits(path) && all_digits(ns) {
+        Some(format!("nvme{ctrl}n{ns}"))
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multipath_component_names_map_to_heads() {
+        assert_eq!(nvme_multipath_head("nvme0c0n1").as_deref(), Some("nvme0n1"));
+        assert_eq!(nvme_multipath_head("nvme12c3n45").as_deref(), Some("nvme12n45"));
+        // Visible head / other devices are not components.
+        assert_eq!(nvme_multipath_head("nvme0n1"), None);
+        assert_eq!(nvme_multipath_head("sda"), None);
+        assert_eq!(nvme_multipath_head("nvme0cXn1"), None);
+    }
+
+    #[test]
+    fn disk_name_keys_are_zero_padded_and_bounded() {
+        let k = disk_name_key("nvme0n1");
+        assert_eq!(&k[..7], b"nvme0n1");
+        assert!(k[7..].iter().all(|&b| b == 0));
+        // 32+ char names truncate with a terminating NUL.
+        let long = "x".repeat(40);
+        let k = disk_name_key(&long);
+        assert_eq!(k[31], 0);
+    }
 }
 
 use linkme::distributed_slice;
