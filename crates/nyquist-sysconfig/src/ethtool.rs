@@ -301,6 +301,10 @@ fn collect_one(eth: &EthtoolSocket, iface: &str) -> Option<InterfaceBaselines> {
             format!("/sys/class/net/{iface}/device/msi_irqs")
         ).map(|d| d.count() as u32).unwrap_or(0);
 
+    let rp_filter = std::fs::read_to_string(
+            format!("/proc/sys/net/ipv4/conf/{iface}/rp_filter")
+        ).ok().and_then(|s| s.trim().parse().ok()).unwrap_or(0);
+
     Some(InterfaceBaselines {
         driver:           cstr(&drv.driver),
         driver_version:   cstr(&drv.version),
@@ -318,5 +322,6 @@ fn collect_one(eth: &EthtoolSocket, iface: &str) -> Option<InterfaceBaselines> {
         rss_table_size:   rss.size,
         coalesce_rx_usecs: coal.rx_coalesce_usecs,
         coalesce_tx_usecs: coal.tx_coalesce_usecs,
+        rp_filter,
     })
 }

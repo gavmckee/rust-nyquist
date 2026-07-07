@@ -50,6 +50,10 @@ pub struct InterfaceBaselines {
     pub rss_table_size: u32,
     pub coalesce_rx_usecs: u32,
     pub coalesce_tx_usecs: u32,
+    /// net.ipv4.conf.<iface>.rp_filter — reverse-path filtering drops
+    /// legitimate traffic under asymmetric routing; the canonical
+    /// per-interface sysctl worth change-tracking on a fabric host.
+    pub rp_filter: u32,
 }
 
 /// Collect only per-interface baselines (driver, mtu, ring params, queues).

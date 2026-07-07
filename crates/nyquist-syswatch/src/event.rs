@@ -34,18 +34,26 @@ impl SwEvent {
         std::str::from_utf8(&self.ifname[..end]).unwrap_or("")
     }
 
-    /// Reconstructs the sysctl path from the three packed dentry name slots:
-    ///   key[0..32)  = grandparent (e.g. "net")
-    ///   key[32..64) = parent      (e.g. "ipv4")
-    ///   key[64..128)= leaf        (e.g. "tcp_rmem")
-    /// Returns "/proc/sys/<gp>/<p>/<leaf>".
+    /// Reconstructs the sysctl path from the three packed dentry name slots
+    /// (the LAST three components of the written file's path):
+    ///   key[0..32)  = grandparent ("net" for 3-deep keys; an intermediate
+    ///                 dir like "conf" for deeper ones)
+    ///   key[32..64) = parent
+    ///   key[64..128)= leaf
+    /// 3-deep keys reconstruct exactly; deeper keys get an elision marker
+    /// since only the last three components were captured.
     pub fn key_str(&self) -> String {
         let seg = |start: usize, len: usize| -> &str {
             let s = &self.key[start..start + len];
             let end = s.iter().position(|&b| b == 0).unwrap_or(len);
             std::str::from_utf8(&s[..end]).unwrap_or("?")
         };
-        format!("/proc/sys/{}/{}/{}", seg(0, 32), seg(32, 32), seg(64, 64))
+        let (gp, p, leaf) = (seg(0, 32), seg(32, 32), seg(64, 64));
+        if gp == "net" {
+            format!("/proc/sys/net/{p}/{leaf}")
+        } else {
+            format!("/proc/sys/net/…/{gp}/{p}/{leaf}")
+        }
     }
 }
 

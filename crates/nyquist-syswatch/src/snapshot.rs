@@ -41,10 +41,13 @@ pub enum AttrScope {
 fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
     if let Some(rest) = key.strip_prefix("sysctl.") {
         // sysctl keys can only ever be claimed by sysctl events. Flattened
-        // names derive from the leaf (tcp_rmem → sysctl.tcp_rmem_max).
+        // names either derive from the leaf (tcp_rmem → sysctl.tcp_rmem_max)
+        // or nest it (conf.<iface>.rp_filter ends with the written leaf).
         return events.iter().find(|e| {
             matches!(&e.scope, AttrScope::Sysctl { leaf }
-                if !leaf.is_empty() && rest.starts_with(leaf.as_str()))
+                if !leaf.is_empty()
+                    && (rest.starts_with(leaf.as_str())
+                        || rest.ends_with(&format!(".{leaf}"))))
         });
     }
     // Interface-scoped keys: "<class>.<iface>" or "<class>.<iface>.<field>".
@@ -165,6 +168,7 @@ fn flatten_into(cfg: &SysConfig, out: &mut HashMap<String, String>) {
         out.insert(format!("msix.{iface}.vectors"),      info.msix_vectors.to_string());
         out.insert(format!("coalesce.{iface}.rx_usecs"), info.coalesce_rx_usecs.to_string());
         out.insert(format!("coalesce.{iface}.tx_usecs"), info.coalesce_tx_usecs.to_string());
+        out.insert(format!("sysctl.conf.{iface}.rp_filter"), info.rp_filter.to_string());
     }
 }
 

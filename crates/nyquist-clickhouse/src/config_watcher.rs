@@ -210,6 +210,7 @@ fn collect_config() -> Vec<(String, String)> {
         out.push((format!("msix.{iface}.vectors"),        info.msix_vectors.to_string()));
         out.push((format!("coalesce.{iface}.rx_usecs"),   info.coalesce_rx_usecs.to_string()));
         out.push((format!("coalesce.{iface}.tx_usecs"),   info.coalesce_tx_usecs.to_string()));
+        out.push((format!("sysctl.conf.{iface}.rp_filter"), info.rp_filter.to_string()));
     }
 
     out
