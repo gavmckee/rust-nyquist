@@ -1,22 +1,21 @@
 [package]
 name = "nyquist-ebpf"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 publish = false
 
 [dependencies]
-nyquist-core = { path = "../nyquist-core" }
-async-trait = "0.1"
-tracing = "0.1"
-anyhow = "1"
-linkme = "0.3"
-histogram = "0.11"
+nyquist-core = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+linkme = { workspace = true }
+histogram = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libbpf-rs = "0.24"
-memmap2 = "0.9"
-libc = "0.2"
+libbpf-rs = { workspace = true }
+memmap2 = { workspace = true }
+libc = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.build-dependencies]
-libbpf-cargo = "0.24"
-
+libbpf-cargo = { workspace = true }

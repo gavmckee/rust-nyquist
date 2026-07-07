@@ -1,17 +1,17 @@
 [package]
 name = "nyquist-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-histogram = "0.11"
-linkme = "0.3"
-dashmap = "6"
-async-trait = "0.1"
-thiserror = "1"
-tokio = { version = "1", features = ["rt", "time", "macros", "sync"] }
-tracing = "0.1"
+histogram = { workspace = true }
+linkme = { workspace = true }
+dashmap = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt", "time", "macros", "sync"] }
+tracing = { workspace = true }
 
 [dev-dependencies]
-proptest = "1"
-tokio = { version = "1", features = ["rt", "time", "macros", "test-util"] }
+proptest = { workspace = true }
+tokio = { workspace = true, features = ["rt", "time", "macros", "test-util"] }

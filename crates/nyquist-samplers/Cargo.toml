@@ -1,12 +1,12 @@
 [package]
 name = "nyquist-samplers"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-nyquist-core      = { path = "../nyquist-core" }
-linkme = "0.3"
-nyquist-sysconfig = { path = "../nyquist-sysconfig" }
-async-trait = "0.1"
-tracing = "0.1"
-libc = "0.2"
+nyquist-core = { workspace = true }
+linkme = { workspace = true }
+nyquist-sysconfig = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+libc = { workspace = true }

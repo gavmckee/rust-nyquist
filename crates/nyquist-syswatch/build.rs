@@ -44,7 +44,18 @@ fn generate_skeletons() {
             ])
             .build_and_generate(&dst)
             .unwrap_or_else(|e| {
-                println!("cargo:warning=skeleton build skipped for {dir}: {e}");
+                // Failing silently here reuses whatever stale skeleton is in
+                // OUT_DIR — shipping outdated BPF bytecode. Only allow that
+                // when explicitly requested (e.g. a dev box without clang).
+                if std::env::var_os("NYQUIST_ALLOW_STALE_BPF").is_some() {
+                    println!("cargo:warning=skeleton build skipped for {dir}: {e}");
+                } else {
+                    panic!(
+                        "BPF skeleton build failed for {dir}: {e}\n\
+                         Install clang + libelf-dev, or set NYQUIST_ALLOW_STALE_BPF=1 \
+                         to knowingly reuse a previously generated skeleton."
+                    );
+                }
             });
     }
     println!("cargo:rerun-if-changed={}", sw_bpf.display());
