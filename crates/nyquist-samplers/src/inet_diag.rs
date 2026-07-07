@@ -109,6 +109,23 @@ fn query_family(family: u8) -> io::Result<Vec<TcpStats>> {
     use std::os::fd::AsRawFd;
     let fd = owned.as_raw_fd();
 
+    // Bound the blocking recv: if the kernel never delivers NLMSG_DONE
+    // (dropped response under memory pressure), an unbounded recv wedged
+    // the tcpinfo sampler task forever.
+    let timeout = libc::timeval { tv_sec: 2, tv_usec: 0 };
+    let rc = unsafe {
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_RCVTIMEO,
+            &timeout as *const _ as *const libc::c_void,
+            std::mem::size_of::<libc::timeval>() as libc::socklen_t,
+        )
+    };
+    if rc < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
     send_dump_request(fd, family)?;
     recv_connections(fd)
 }
@@ -121,22 +138,29 @@ fn send_dump_request(fd: libc::c_int, family: u8) -> io::Result<()> {
 
     let mut buf = vec![0u8; total];
 
-    let hdr = unsafe { &mut *(buf.as_mut_ptr() as *mut NlMsgHdr) };
-    hdr.len   = total as u32;
-    hdr.typ   = SOCK_DIAG_BY_FAMILY;
-    hdr.flags = NLM_F_REQUEST | NLM_F_DUMP;
-    hdr.seq   = 1;
-    hdr.pid   = 0;
-
-    let req = unsafe {
-        &mut *(buf[hdr_len..].as_mut_ptr() as *mut InetDiagReqV2)
+    // Structs are built on the stack and written unaligned: Vec<u8> only
+    // guarantees 1-byte alignment, so casting its pointer to a &mut of a
+    // 4-byte-aligned type was UB (it worked only because allocators happen
+    // to hand back 16-aligned blocks).
+    let hdr = NlMsgHdr {
+        len:   total as u32,
+        typ:   SOCK_DIAG_BY_FAMILY,
+        flags: NLM_F_REQUEST | NLM_F_DUMP,
+        seq:   1,
+        pid:   0,
     };
-    req.family   = family;
-    req.protocol = IPPROTO_TCP;
-    req.ext      = 1 << (INET_DIAG_INFO - 1); // request tcp_info extension
-    req.pad      = 0;
-    req.states   = TCPF_ALL;
-    // id fields left zero = wildcard match
+    let req = InetDiagReqV2 {
+        family,
+        protocol: IPPROTO_TCP,
+        ext:      1 << (INET_DIAG_INFO - 1), // request tcp_info extension
+        pad:      0,
+        states:   TCPF_ALL,
+        id:       unsafe { std::mem::zeroed() }, // wildcard match
+    };
+    unsafe {
+        std::ptr::write_unaligned(buf.as_mut_ptr() as *mut NlMsgHdr, hdr);
+        std::ptr::write_unaligned(buf[hdr_len..].as_mut_ptr() as *mut InetDiagReqV2, req);
+    }
 
     // Use zeroed() to avoid libc's Padding<u16> type for nl_pad
     let mut dst: libc::sockaddr_nl = unsafe { std::mem::zeroed() };
@@ -160,18 +184,27 @@ fn recv_connections(fd: libc::c_int) -> io::Result<Vec<TcpStats>> {
     let mut buf = vec![0u8; 65536];
 
     loop {
+        // MSG_TRUNC makes recv return the REAL message size even when it
+        // exceeds the buffer; without it an oversized kernel chunk would be
+        // silently cut and the parse would desync mid-record.
         let len = unsafe {
-            libc::recv(fd, buf.as_mut_ptr() as *mut _, buf.len(), 0)
+            libc::recv(fd, buf.as_mut_ptr() as *mut _, buf.len(), libc::MSG_TRUNC)
         };
         if len < 0 {
             return Err(io::Error::last_os_error());
         }
         let len = len as usize;
+        if len > buf.len() {
+            return Err(io::Error::other(format!(
+                "netlink message truncated: {len} bytes > {} buffer", buf.len()
+            )));
+        }
         if len == 0 { break; }
 
         let mut pos = 0usize;
         while pos + std::mem::size_of::<NlMsgHdr>() <= len {
-            let hdr = unsafe { &*(buf[pos..].as_ptr() as *const NlMsgHdr) };
+            // read_unaligned: Vec<u8> offsets carry no alignment guarantee.
+            let hdr: NlMsgHdr = unsafe { std::ptr::read_unaligned(buf[pos..].as_ptr() as *const NlMsgHdr) };
             let msg_len = hdr.len as usize;
 
             if msg_len < std::mem::size_of::<NlMsgHdr>() || pos + msg_len > len {
@@ -215,7 +248,8 @@ fn parse_diag_msg(payload: &[u8]) -> Option<TcpStats> {
     let msg_sz = std::mem::size_of::<InetDiagMsg>();
     if payload.len() < msg_sz { return None; }
 
-    let msg = unsafe { &*(payload.as_ptr() as *const InetDiagMsg) };
+    // read_unaligned: the payload slice carries no alignment guarantee.
+    let msg: InetDiagMsg = unsafe { std::ptr::read_unaligned(payload.as_ptr() as *const InetDiagMsg) };
     // Ports are in network byte order
     let sport = u16::from_be(msg.id.sport);
     let dport = u16::from_be(msg.id.dport);
