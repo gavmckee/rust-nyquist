@@ -17,6 +17,8 @@ pub struct SwEvent {
 pub const SW_SRC_SYSCTL:    u32 = 0;
 pub const SW_SRC_ETHTOOL:   u32 = 1;
 pub const SW_SRC_RTNETLINK: u32 = 2;
+/// Synthesized by the userspace fswatch (inotify) thread, not by BPF.
+pub const SW_SRC_FSWATCH:   u32 = 3;
 
 impl SwEvent {
     pub fn from_bytes(data: &[u8]) -> Option<&Self> {

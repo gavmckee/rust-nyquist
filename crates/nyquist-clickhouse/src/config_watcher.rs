@@ -211,6 +211,15 @@ fn collect_config() -> Vec<(String, String)> {
         out.push((format!("coalesce.{iface}.rx_usecs"),   info.coalesce_rx_usecs.to_string()));
         out.push((format!("coalesce.{iface}.tx_usecs"),   info.coalesce_tx_usecs.to_string()));
         out.push((format!("sysctl.conf.{iface}.rp_filter"), info.rp_filter.to_string()));
+        for (q, mask) in &info.steering.rps {
+            out.push((format!("rps.{iface}.rx-{q}"), mask.clone()));
+        }
+        for (q, mask) in &info.steering.xps {
+            out.push((format!("xps.{iface}.tx-{q}"), mask.clone()));
+        }
+        for (irq, aff) in &info.steering.irq_affinity {
+            out.push((format!("irq.{iface}.{irq}"), aff.clone()));
+        }
     }
 
     out

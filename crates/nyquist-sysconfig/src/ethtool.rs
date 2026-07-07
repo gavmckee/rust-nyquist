@@ -323,5 +323,6 @@ fn collect_one(eth: &EthtoolSocket, iface: &str) -> Option<InterfaceBaselines> {
         coalesce_rx_usecs: coal.rx_coalesce_usecs,
         coalesce_tx_usecs: coal.tx_coalesce_usecs,
         rp_filter,
+        steering: crate::steering::read_for(iface),
     })
 }

@@ -35,6 +35,10 @@ pub enum AttrScope {
     /// An rtnetlink link change (iface unknown from the event). Claims only
     /// link-level keys (mtu.*), never sysctl.* keys.
     Link,
+    /// An inotify (fswatch) hit on a steering file. inotify carries no
+    /// writer identity, so these claim only steering keys (rps./xps./irq.)
+    /// and surface as comm="fswatch" — sub-second detection, no attribution.
+    Steering,
 }
 
 /// Find the event that can claim `key`, most specific scope first.
@@ -69,6 +73,12 @@ fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
         .or_else(|| {
             events.iter().find(|e| {
                 matches!(e.scope, AttrScope::Link) && key.starts_with("mtu.")
+            })
+        })
+        .or_else(|| {
+            let steering_key = ["rps.", "xps.", "irq."].iter().any(|p| key.starts_with(p));
+            events.iter().find(|e| {
+                matches!(e.scope, AttrScope::Steering) && steering_key
             })
         })
 }
@@ -169,6 +179,15 @@ fn flatten_into(cfg: &SysConfig, out: &mut HashMap<String, String>) {
         out.insert(format!("coalesce.{iface}.rx_usecs"), info.coalesce_rx_usecs.to_string());
         out.insert(format!("coalesce.{iface}.tx_usecs"), info.coalesce_tx_usecs.to_string());
         out.insert(format!("sysctl.conf.{iface}.rp_filter"), info.rp_filter.to_string());
+        for (q, mask) in &info.steering.rps {
+            out.insert(format!("rps.{iface}.rx-{q}"), mask.clone());
+        }
+        for (q, mask) in &info.steering.xps {
+            out.insert(format!("xps.{iface}.tx-{q}"), mask.clone());
+        }
+        for (irq, aff) in &info.steering.irq_affinity {
+            out.insert(format!("irq.{iface}.{irq}"), aff.clone());
+        }
     }
 }
 
@@ -227,6 +246,16 @@ mod tests {
             ev(2, "specific", AttrScope::Iface { name: "eth0".into() }),
         ];
         assert_eq!(resolve("ring.eth0.rx", &both).unwrap().comm, "specific");
+    }
+
+    #[test]
+    fn steering_events_claim_only_steering_keys() {
+        let events = vec![ev(9, "fswatch", AttrScope::Steering)];
+        assert_eq!(resolve("rps.ens1f0np0.rx-3", &events).unwrap().comm, "fswatch");
+        assert_eq!(resolve("xps.ens1f0np0.tx-0", &events).unwrap().comm, "fswatch");
+        assert_eq!(resolve("irq.ens1f0np0.211", &events).unwrap().comm, "fswatch");
+        assert!(resolve("ring.ens1f0np0.rx", &events).is_none());
+        assert!(resolve("sysctl.rmem_max", &events).is_none());
     }
 
     #[test]

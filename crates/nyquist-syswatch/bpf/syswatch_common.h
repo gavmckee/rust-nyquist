@@ -11,6 +11,7 @@
 #define SW_SRC_SYSCTL    0u
 #define SW_SRC_ETHTOOL   1u
 #define SW_SRC_RTNETLINK 2u
+#define SW_SRC_FSWATCH   3u  /* synthesized in userspace (inotify), never by BPF */
 
 /* ethtool SET command IDs (from <linux/ethtool.h>) */
 #define ETHTOOL_SSET          0x00000002u

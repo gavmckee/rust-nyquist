@@ -1,4 +1,5 @@
 mod ethtool;
+mod steering;
 mod sysctl;
 
 use std::collections::HashMap;
@@ -54,7 +55,12 @@ pub struct InterfaceBaselines {
     /// legitimate traffic under asymmetric routing; the canonical
     /// per-interface sysctl worth change-tracking on a fabric host.
     pub rp_filter: u32,
+    /// RPS/XPS masks + IRQ affinities (physical interfaces only).
+    #[serde(default)]
+    pub steering: steering::Steering,
 }
+
+pub use steering::Steering;
 
 /// Collect only per-interface baselines (driver, mtu, ring params, queues).
 /// Cheaper than `collect()` — skips sysctl and kernel reads. Used by the

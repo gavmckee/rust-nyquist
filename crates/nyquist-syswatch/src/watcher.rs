@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 use anyhow::Context;
 use tracing::{info, warn};
-use crate::event::{SW_SRC_ETHTOOL, SW_SRC_RTNETLINK, SW_SRC_SYSCTL, SwEvent};
+use crate::event::{SW_SRC_ETHTOOL, SW_SRC_FSWATCH, SW_SRC_RTNETLINK, SW_SRC_SYSCTL, SwEvent};
 use crate::inotify::InotifyWatcher;
 use crate::sink::Sink;
 use crate::snapshot::{AttrScope, Change, EventAttr, Snapshot};
@@ -33,8 +33,14 @@ impl SysWatcher {
         let mut snapshot = Snapshot::from_sysconfig(&initial);
         info!("syswatch: baseline snapshot taken ({} interfaces)", initial.interfaces.len());
 
-        // Channel: BPF polling thread → async event loop.
+        // Channel: BPF polling thread + fswatch thread → async event loop.
         let (tx, rx) = mpsc::sync_channel::<SwEvent>(512);
+
+        // fswatch (inotify) covers steering files BPF cannot: RPS/XPS masks
+        // and IRQ affinities. Failure is non-fatal — the 60s poll remains.
+        if let Err(e) = InotifyWatcher::spawn(tx.clone()) {
+            warn!(error = %e, "syswatch: fswatch unavailable — steering changes fall to the 60s poll");
+        }
 
         // Try to load BPF programs. Failure is non-fatal — we still run the
         // 60s polling fallback so config changes are never silently missed.
@@ -71,8 +77,6 @@ impl SysWatcher {
 
         #[cfg(not(target_os = "linux"))]
         let bpf_active = false;
-
-        let _inotify = InotifyWatcher::new()?;
 
         let mut refresh = tokio::time::interval(Duration::from_secs(60));
         refresh.tick().await; // discard the immediate first tick
@@ -127,6 +131,14 @@ impl SysWatcher {
                                     pid:   ev.pid,
                                     comm:  ev.comm_str().to_string(),
                                     scope,
+                                });
+                            }
+                            SW_SRC_FSWATCH => {
+                                tracing::debug!("syswatch: steering file write detected");
+                                events.push(EventAttr {
+                                    pid:   0,
+                                    comm:  "fswatch".to_string(),
+                                    scope: AttrScope::Steering,
                                 });
                             }
                             SW_SRC_RTNETLINK => {
