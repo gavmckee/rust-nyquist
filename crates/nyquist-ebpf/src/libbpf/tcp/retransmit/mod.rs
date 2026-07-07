@@ -11,7 +11,7 @@ use std::os::fd::{AsFd, AsRawFd, FromRawFd};
 use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use memmap2::MmapOptions;
-use nyquist_core::model::{Kind, MetricId, Unit};
+use nyquist_core::model::{Kind, Labels, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
 
@@ -34,15 +34,23 @@ pub struct Retransmit {
 
 impl Retransmit {
     pub fn new(reg: &Registry, interval: Duration) -> Self {
-        let id = reg.register(MetricDef::new(METRIC, Kind::Counter).unit(Unit::Count));
+        // source="ebpf" keeps this segment counter distinct from the tcpinfo
+        // sampler's tcp_retransmits{port} event counter (same base name,
+        // different origin and units). Mirrors cpu/usage.
+        let id = reg.register(
+            MetricDef::new(METRIC, Kind::Counter)
+                .unit(Unit::Count)
+                .labels(Labels::new().insert("source", "ebpf")),
+        );
         Retransmit { interval, state: State::Uninit, id: Some(id) }
     }
 
     fn try_init(&mut self) -> anyhow::Result<()> {
         use std::mem::MaybeUninit;
         use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
-        let mut object = MaybeUninit::uninit();
-        let open_skel = skel::ModSkelBuilder::default().open(&mut object)?;
+        // Leaked so the skeleton's borrow of the OpenObject is genuinely 'static.
+        let object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
         loaded.attach()?;
 
@@ -55,7 +63,7 @@ impl Retransmit {
         let ptr = mmap.as_ptr() as *const u64;
         std::mem::forget(mmap);
 
-        let skel: Box<skel::ModSkel<'static>> = unsafe { std::mem::transmute(Box::new(loaded)) };
+        let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
         self.state = State::Running { _skel: skel, ptr };
         Ok(())
     }

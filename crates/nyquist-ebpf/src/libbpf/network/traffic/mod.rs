@@ -65,8 +65,9 @@ impl NetworkTraffic {
     fn try_init(&mut self) -> anyhow::Result<()> {
         use std::mem::MaybeUninit;
         use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
-        let mut object = MaybeUninit::uninit();
-        let open_skel = skel::ModSkelBuilder::default().open(&mut object)?;
+        // Leaked so the skeleton's borrow of the OpenObject is genuinely 'static.
+        let object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel::ModSkelBuilder::default().open(object)?;
         let mut loaded = open_skel.load()?;
         loaded.attach()?;
 
@@ -79,7 +80,7 @@ impl NetworkTraffic {
         let ptr = mmap.as_ptr() as *const u64;
         std::mem::forget(mmap);
 
-        let skel: Box<skel::ModSkel<'static>> = unsafe { std::mem::transmute(Box::new(loaded)) };
+        let skel: Box<skel::ModSkel<'static>> = Box::new(loaded);
         self.state = State::Running { _skel: skel, ptr };
         Ok(())
     }

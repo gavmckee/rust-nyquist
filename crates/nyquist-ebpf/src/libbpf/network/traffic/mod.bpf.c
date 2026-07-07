@@ -42,23 +42,30 @@ int BPF_PROG(net_dev_xmit, struct sk_buff *skb, int rc,
 
 // RX dropped: fires when an skb is freed due to a drop (not a normal consume).
 // Only RX-path drop reasons are counted; TX drops are counted via net_dev_xmit.
+//
+// enum skb_drop_reason has been renumbered repeatedly upstream (reasons
+// inserted mid-enum across 5.18..6.x), so the values MUST be CO-RE-relocated
+// at load time — a switch over the vendored vmlinux.h numerals silently
+// matches the wrong reasons on other kernels. The _exists guard also makes
+// pre-5.17 kernels (no such enum member, garbage arg2) count nothing rather
+// than garbage.
+#define IS_RX_DROP(name) \
+    (bpf_core_enum_value_exists(enum skb_drop_reason, name) && \
+     reason == bpf_core_enum_value(enum skb_drop_reason, name))
+
 SEC("raw_tp/kfree_skb")
 int BPF_PROG(kfree_skb, struct sk_buff *skb, void *location,
              enum skb_drop_reason reason) {
     if (!skb) return 0;
-    switch (reason) {
-    case SKB_DROP_REASON_CPU_BACKLOG:
-    case SKB_DROP_REASON_SOCKET_RCVBUFF:
-    case SKB_DROP_REASON_PROTO_MEM:
-    case SKB_DROP_REASON_NO_SOCKET:
-    case SKB_DROP_REASON_SOCKET_BACKLOG:
-    case SKB_DROP_REASON_NETFILTER_DROP:
-    case SKB_DROP_REASON_TC_INGRESS:
-    case SKB_DROP_REASON_UNHANDLED_PROTO:
-        break;
-    default:
+    if (!(IS_RX_DROP(SKB_DROP_REASON_CPU_BACKLOG) ||
+          IS_RX_DROP(SKB_DROP_REASON_SOCKET_RCVBUFF) ||
+          IS_RX_DROP(SKB_DROP_REASON_PROTO_MEM) ||
+          IS_RX_DROP(SKB_DROP_REASON_NO_SOCKET) ||
+          IS_RX_DROP(SKB_DROP_REASON_SOCKET_BACKLOG) ||
+          IS_RX_DROP(SKB_DROP_REASON_NETFILTER_DROP) ||
+          IS_RX_DROP(SKB_DROP_REASON_TC_INGRESS) ||
+          IS_RX_DROP(SKB_DROP_REASON_UNHANDLED_PROTO)))
         return 0;
-    }
     struct net_device *dev = BPF_CORE_READ(skb, dev);
     if (!dev) return 0;
     __u32 ifindex = BPF_CORE_READ(dev, ifindex);

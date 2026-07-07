@@ -63,7 +63,7 @@ fn buckets_are_ascending_and_non_empty() {
     for &v in &[1u64, 50, 1_000, 50_000, 1_000_000] {
         h.increment(v).unwrap();
     }
-    let buckets = buckets_from_counts(&h.as_slice().to_vec());
+    let buckets = buckets_from_counts(h.as_slice());
     assert!(buckets.iter().all(|&(_, c)| c > 0), "empty bucket leaked");
     let bounds: Vec<u64> = buckets.iter().map(|&(b, _)| b).collect();
     let mut sorted = bounds.clone();
@@ -78,7 +78,7 @@ fn total_count_is_preserved() {
     for &v in &inputs {
         for _ in 0..10 { h.increment(v).unwrap(); }
     }
-    let buckets = buckets_from_counts(&h.as_slice().to_vec());
+    let buckets = buckets_from_counts(h.as_slice());
     let total: u64 = buckets.iter().map(|&(_, c)| c).sum();
     assert_eq!(total, (inputs.len() * 10) as u64);
 }

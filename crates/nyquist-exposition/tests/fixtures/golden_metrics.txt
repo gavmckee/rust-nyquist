@@ -953,11 +953,11 @@ softirq_net_tx_rate{percentile="90"} 0
 softirq_net_tx_rate{percentile="99"} 0
 softirq_net_tx_rate{percentile="99.9"} 0
 # TYPE tcp_rtt_us summary
-tcp_rtt_us 1
-tcp_rtt_us_rate{percentile="50"} 114687
-tcp_rtt_us_rate{percentile="90"} 114687
-tcp_rtt_us_rate{percentile="99"} 114687
-tcp_rtt_us_rate{percentile="99.9"} 114687
+tcp_rtt_us{source="ebpf"} 1
+tcp_rtt_us_rate{source="ebpf",percentile="50"} 114687
+tcp_rtt_us_rate{source="ebpf",percentile="90"} 114687
+tcp_rtt_us_rate{source="ebpf",percentile="99"} 114687
+tcp_rtt_us_rate{source="ebpf",percentile="99.9"} 114687
 # TYPE cpu_usage_user counter
 cpu_usage_user{cpu="cpu2"} 28000000
 cpu_usage_user_rate{cpu="cpu2",percentile="50"} 0
@@ -1679,11 +1679,11 @@ softirq_tasklet_rate{percentile="90"} 100
 softirq_tasklet_rate{percentile="99"} 131
 softirq_tasklet_rate{percentile="99.9"} 409
 # TYPE tcp_retransmits counter
-tcp_retransmits 0
-tcp_retransmits_rate{percentile="50"} 0
-tcp_retransmits_rate{percentile="90"} 0
-tcp_retransmits_rate{percentile="99"} 0
-tcp_retransmits_rate{percentile="99.9"} 0
+tcp_retransmits{source="ebpf"} 0
+tcp_retransmits_rate{source="ebpf",percentile="50"} 0
+tcp_retransmits_rate{source="ebpf",percentile="90"} 0
+tcp_retransmits_rate{source="ebpf",percentile="99"} 0
+tcp_retransmits_rate{source="ebpf",percentile="99.9"} 0
 # TYPE cpu_usage_user counter
 cpu_usage_user{cpu="cpu0"} 92000000
 cpu_usage_user_rate{cpu="cpu0",percentile="50"} 0
