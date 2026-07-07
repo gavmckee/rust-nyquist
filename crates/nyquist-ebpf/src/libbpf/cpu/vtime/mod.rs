@@ -47,7 +47,14 @@ pub struct CpuVtime {
 
 fn cpu_count_online() -> usize {
     let n = unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) };
-    if n <= 0 { 1 } else { n as usize }
+    let n = if n <= 0 { 1 } else { n as usize };
+    // The BPF side drops events for cpu >= MAX_CPUS; the Rust side must
+    // clamp to the same bound or the mmap index arithmetic walks past the
+    // map and panics on >MAX_CPUS-core machines.
+    if n > MAX_CPUS {
+        tracing::warn!(online = n, max = MAX_CPUS, "clamping tracked CPUs to map size");
+    }
+    n.min(MAX_CPUS)
 }
 
 impl CpuVtime {
