@@ -9,6 +9,54 @@ pub struct Change {
     pub comm:      String,
 }
 
+/// One drained BPF event, reduced to what attribution needs.
+pub struct EventAttr {
+    pub pid:   u32,
+    pub comm:  String,
+    pub scope: AttrScope,
+}
+
+/// What part of the config namespace an event can legitimately claim.
+/// Attribution is per-key: stamping a whole diff batch with the last drained
+/// event let an unrelated rtnetlink event (e.g. lldpd touching link state in
+/// the same 50 ms drain window) claim a sysctl write.
+pub enum AttrScope {
+    /// A /proc/sys write; `leaf` is the written file's name (e.g. "tcp_rmem").
+    /// Claims only `sysctl.*` keys derived from that leaf.
+    Sysctl { leaf: String },
+    /// An ethtool SET on a specific interface. Claims any key whose interface
+    /// segment matches (ring.*, channels.*, coalesce.*, rss.*, mtu.*, msix.*).
+    Iface { name: String },
+    /// An rtnetlink link change (iface unknown from the event). Claims only
+    /// link-level keys (mtu.*), never sysctl.* keys.
+    Link,
+}
+
+/// Find the event that can claim `key`, most specific scope first.
+fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
+    if let Some(rest) = key.strip_prefix("sysctl.") {
+        // sysctl keys can only ever be claimed by sysctl events. Flattened
+        // names derive from the leaf (tcp_rmem → sysctl.tcp_rmem_max).
+        return events.iter().find(|e| {
+            matches!(&e.scope, AttrScope::Sysctl { leaf }
+                if !leaf.is_empty() && rest.starts_with(leaf.as_str()))
+        });
+    }
+    // Interface-scoped keys: "<class>.<iface>" or "<class>.<iface>.<field>".
+    let iface_of_key = key.split('.').nth(1);
+    events
+        .iter()
+        .find(|e| {
+            matches!(&e.scope, AttrScope::Iface { name }
+                if Some(name.as_str()) == iface_of_key)
+        })
+        .or_else(|| {
+            events.iter().find(|e| {
+                matches!(e.scope, AttrScope::Link) && key.starts_with("mtu.")
+            })
+        })
+}
+
 /// Current known configuration state. Updated on every BPF/inotify event.
 pub struct Snapshot {
     state: HashMap<String, String>,
@@ -23,13 +71,45 @@ impl Snapshot {
     }
 
     /// Merge a new SysConfig reading, returning only keys whose values changed.
-    /// The pid/comm fields are attached from the triggering BPF event.
+    /// Every change is uniformly stamped with `pid`/`comm` — used by the
+    /// polling path where there is no per-key trigger information.
     pub fn diff_and_update(
         &mut self,
         cfg:  &SysConfig,
         pid:  u32,
         comm: &str,
     ) -> Vec<Change> {
+        self.diff_raw(cfg)
+            .into_iter()
+            .map(|(key, old_value, new_value)| Change {
+                key, old_value, new_value,
+                pid,
+                comm: comm.to_string(),
+            })
+            .collect()
+    }
+
+    /// Like `diff_and_update`, but each changed key is attributed to the
+    /// drained BPF event whose scope claims it. Keys no event can claim get
+    /// pid 0 / "unknown" — an honest gap beats a confident misattribution.
+    pub fn diff_and_update_attributed(
+        &mut self,
+        cfg:    &SysConfig,
+        events: &[EventAttr],
+    ) -> Vec<Change> {
+        self.diff_raw(cfg)
+            .into_iter()
+            .map(|(key, old_value, new_value)| {
+                let (pid, comm) = match resolve(&key, events) {
+                    Some(e) => (e.pid, e.comm.clone()),
+                    None => (0, "unknown".to_string()),
+                };
+                Change { key, old_value, new_value, pid, comm }
+            })
+            .collect()
+    }
+
+    fn diff_raw(&mut self, cfg: &SysConfig) -> Vec<(String, String, String)> {
         let mut fresh: HashMap<String, String> = HashMap::new();
         flatten_into(cfg, &mut fresh);
 
@@ -37,13 +117,7 @@ impl Snapshot {
         for (k, new_v) in &fresh {
             match self.state.get(k) {
                 Some(old_v) if old_v == new_v => {}
-                Some(old_v) => changes.push(Change {
-                    key:       k.clone(),
-                    old_value: old_v.clone(),
-                    new_value: new_v.clone(),
-                    pid,
-                    comm:      comm.to_string(),
-                }),
+                Some(old_v) => changes.push((k.clone(), old_v.clone(), new_v.clone())),
                 // First time seeing this key (new interface appeared) — no change record.
                 None => {}
             }
@@ -78,5 +152,53 @@ fn flatten_into(cfg: &SysConfig, out: &mut HashMap<String, String>) {
         out.insert(format!("msix.{iface}.vectors"),      info.msix_vectors.to_string());
         out.insert(format!("coalesce.{iface}.rx_usecs"), info.coalesce_rx_usecs.to_string());
         out.insert(format!("coalesce.{iface}.tx_usecs"), info.coalesce_tx_usecs.to_string());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ev(pid: u32, comm: &str, scope: AttrScope) -> EventAttr {
+        EventAttr { pid, comm: comm.to_string(), scope }
+    }
+
+    #[test]
+    fn sysctl_key_claimed_only_by_matching_sysctl_event() {
+        // Regression for the observed quirk: an lldpd rtnetlink event in the
+        // same drain window must never claim a sysctl change.
+        let events = vec![
+            ev(200, "lldpd", AttrScope::Link),
+            ev(100, "sysctl", AttrScope::Sysctl { leaf: "tcp_rmem".into() }),
+        ];
+        let hit = resolve("sysctl.tcp_rmem_max", &events).unwrap();
+        assert_eq!(hit.comm, "sysctl");
+        // A sysctl event for a different leaf doesn't claim it either.
+        let other = vec![ev(1, "x", AttrScope::Sysctl { leaf: "rmem_max".into() })];
+        assert!(resolve("sysctl.tcp_rmem_max", &other).is_none());
+        // rmem_max leaf claims sysctl.rmem_max but not sysctl.tcp_rmem_max.
+        assert!(resolve("sysctl.rmem_max", &other).is_some());
+    }
+
+    #[test]
+    fn iface_keys_prefer_ethtool_then_link_events() {
+        let events = vec![
+            ev(300, "lldpd", AttrScope::Link),
+            ev(400, "ethtool", AttrScope::Iface { name: "ens1f0np0".into() }),
+        ];
+        // ethtool event claims its interface's ring key.
+        assert_eq!(resolve("ring.ens1f0np0.rx", &events).unwrap().comm, "ethtool");
+        // A different interface's key falls through to the Link event only
+        // for link-level (mtu.*) keys...
+        assert_eq!(resolve("mtu.ens1f1np1", &events).unwrap().comm, "lldpd");
+        // ...but not for ethtool-domain keys like channels.
+        assert!(resolve("channels.ens1f1np1.rx", &events).is_none());
+    }
+
+    #[test]
+    fn unclaimed_keys_resolve_to_none() {
+        assert!(resolve("sysctl.tcp_congestion_control", &[]).is_none());
+        let only_sysctl = vec![ev(1, "sysctl", AttrScope::Sysctl { leaf: "rp_filter".into() })];
+        assert!(resolve("ring.eth0.rx", &only_sysctl).is_none());
     }
 }

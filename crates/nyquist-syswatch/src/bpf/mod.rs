@@ -35,8 +35,9 @@ impl BpfState {
     /// Returns Err only if ALL three fail.
     pub fn load(tx: SyncSender<SwEvent>) -> anyhow::Result<(Self, LoadReport)> {
         // Phase 1: load and attach each skeleton independently.
-        // Skeletons are transmuted to 'static and stored in Boxes so their heap
-        // addresses are stable — we derive raw map pointers from them in phase 2.
+        // Each skeleton borrows a leaked OpenObject (genuinely 'static) and is
+        // Boxed so its heap address is stable — we derive raw map pointers
+        // from them in phase 2.
         let (sc, sc_r) = load_sysctl();
         let (eth, eth_r) = load_ethtool();
         let (nl, nl_r) = load_rtnetlink();
@@ -94,8 +95,10 @@ fn err_str(r: &Result<(), String>) -> &str {
 }
 
 fn load_sysctl() -> (Option<Box<sysctl_skel::ModSkel<'static>>>, Result<(), String>) {
-    let mut obj = MaybeUninit::uninit();
-    let open = match sysctl_skel::ModSkelBuilder::default().open(&mut obj) {
+    // Leaked so the skeleton's borrow of the OpenObject is genuinely 'static
+    // (a stack-local + transmute would dangle into a dead frame).
+    let obj = Box::leak(Box::new(MaybeUninit::uninit()));
+    let open = match sysctl_skel::ModSkelBuilder::default().open(obj) {
         Err(e) => return (None, Err(e.to_string())),
         Ok(o)  => o,
     };
@@ -106,14 +109,12 @@ fn load_sysctl() -> (Option<Box<sysctl_skel::ModSkel<'static>>>, Result<(), Stri
     if let Err(e) = loaded.attach() {
         return (None, Err(e.to_string()));
     }
-    let skel: Box<sysctl_skel::ModSkel<'static>> =
-        unsafe { std::mem::transmute(Box::new(loaded)) };
-    (Some(skel), Ok(()))
+    (Some(Box::new(loaded)), Ok(()))
 }
 
 fn load_ethtool() -> (Option<Box<ethtool_skel::ModSkel<'static>>>, Result<(), String>) {
-    let mut obj = MaybeUninit::uninit();
-    let open = match ethtool_skel::ModSkelBuilder::default().open(&mut obj) {
+    let obj = Box::leak(Box::new(MaybeUninit::uninit()));
+    let open = match ethtool_skel::ModSkelBuilder::default().open(obj) {
         Err(e) => return (None, Err(e.to_string())),
         Ok(o)  => o,
     };
@@ -124,14 +125,12 @@ fn load_ethtool() -> (Option<Box<ethtool_skel::ModSkel<'static>>>, Result<(), St
     if let Err(e) = loaded.attach() {
         return (None, Err(e.to_string()));
     }
-    let skel: Box<ethtool_skel::ModSkel<'static>> =
-        unsafe { std::mem::transmute(Box::new(loaded)) };
-    (Some(skel), Ok(()))
+    (Some(Box::new(loaded)), Ok(()))
 }
 
 fn load_rtnetlink() -> (Option<Box<rtnetlink_skel::ModSkel<'static>>>, Result<(), String>) {
-    let mut obj = MaybeUninit::uninit();
-    let open = match rtnetlink_skel::ModSkelBuilder::default().open(&mut obj) {
+    let obj = Box::leak(Box::new(MaybeUninit::uninit()));
+    let open = match rtnetlink_skel::ModSkelBuilder::default().open(obj) {
         Err(e) => return (None, Err(e.to_string())),
         Ok(o)  => o,
     };
@@ -142,7 +141,5 @@ fn load_rtnetlink() -> (Option<Box<rtnetlink_skel::ModSkel<'static>>>, Result<()
     if let Err(e) = loaded.attach() {
         return (None, Err(e.to_string()));
     }
-    let skel: Box<rtnetlink_skel::ModSkel<'static>> =
-        unsafe { std::mem::transmute(Box::new(loaded)) };
-    (Some(skel), Ok(()))
+    (Some(Box::new(loaded)), Ok(()))
 }

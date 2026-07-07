@@ -5,7 +5,7 @@ use tracing::{info, warn};
 use crate::event::{SW_SRC_ETHTOOL, SW_SRC_RTNETLINK, SW_SRC_SYSCTL, SwEvent};
 use crate::inotify::InotifyWatcher;
 use crate::sink::Sink;
-use crate::snapshot::{Change, Snapshot};
+use crate::snapshot::{AttrScope, Change, EventAttr, Snapshot};
 
 pub struct SysWatcher {
     ch_url:  String,
@@ -88,47 +88,53 @@ impl SysWatcher {
                 // Drain BPF events without blocking the async executor.
                 // try_recv is non-blocking; the select arm completes immediately.
                 _ = tokio::task::yield_now() => {
-                    let mut should_refresh = false;
-                    let mut trigger_pid  = 0u32;
-                    let mut trigger_comm = String::new();
+                    // Each event is kept with its own scope so the diff can
+                    // attribute per key. Stamping the whole batch with the
+                    // last-drained event let an unrelated rtnetlink event
+                    // (e.g. lldpd) claim a sysctl write landing in the same
+                    // drain window.
+                    let mut events: Vec<EventAttr> = Vec::new();
 
                     while let Ok(ev) = rx.try_recv() {
                         match ev.src {
                             SW_SRC_SYSCTL => {
                                 let key = ev.key_str();
-                                let pid  = ev.pid;
-                                let comm = ev.comm_str().to_string();
                                 // Convert /proc/sys/net/ipv4/tcp_rmem → full sysconfig refresh.
                                 // A targeted single-key read would be faster but nyquist_sysconfig
                                 // doesn't expose per-key reads yet; full collect() is fine given
                                 // the low frequency of sysctl changes.
-                                tracing::debug!(key, pid, comm, "syswatch: sysctl write detected");
-                                should_refresh = true;
-                                trigger_pid  = pid;
-                                trigger_comm = comm;
+                                let leaf = key.rsplit('/').next().unwrap_or("").to_string();
+                                tracing::debug!(key, pid = ev.pid, comm = ev.comm_str(), "syswatch: sysctl write detected");
+                                events.push(EventAttr {
+                                    pid:   ev.pid,
+                                    comm:  ev.comm_str().to_string(),
+                                    scope: AttrScope::Sysctl { leaf },
+                                });
                             }
                             SW_SRC_ETHTOOL => {
                                 let iface = ev.ifname_str().to_string();
-                                let comm  = ev.comm_str().to_string();
-                                tracing::debug!(iface, ethcmd = ev.ethcmd, comm, "syswatch: ethtool SET detected");
-                                should_refresh = true;
-                                trigger_pid  = ev.pid;
-                                trigger_comm = comm;
+                                tracing::debug!(iface, ethcmd = ev.ethcmd, comm = ev.comm_str(), "syswatch: ethtool SET detected");
+                                events.push(EventAttr {
+                                    pid:   ev.pid,
+                                    comm:  ev.comm_str().to_string(),
+                                    scope: AttrScope::Iface { name: iface },
+                                });
                             }
                             SW_SRC_RTNETLINK => {
-                                let comm = ev.comm_str().to_string();
-                                tracing::debug!(nlmsg_type = ev.nlmsg_type, comm, "syswatch: rtnetlink change detected");
-                                should_refresh = true;
-                                trigger_pid  = ev.pid;
-                                trigger_comm = comm;
+                                tracing::debug!(nlmsg_type = ev.nlmsg_type, comm = ev.comm_str(), "syswatch: rtnetlink change detected");
+                                events.push(EventAttr {
+                                    pid:   ev.pid,
+                                    comm:  ev.comm_str().to_string(),
+                                    scope: AttrScope::Link,
+                                });
                             }
                             _ => {}
                         }
                     }
 
-                    if should_refresh {
+                    if !events.is_empty() {
                         let cfg = tokio::task::spawn_blocking(nyquist_sysconfig::collect).await?;
-                        let changes = snapshot.diff_and_update(&cfg, trigger_pid, &trigger_comm);
+                        let changes = snapshot.diff_and_update_attributed(&cfg, &events);
                         if !changes.is_empty() {
                             info!(
                                 count = changes.len(),
