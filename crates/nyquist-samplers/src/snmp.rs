@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
-use crate::procfs::{parse_net_snmp, parse_net_snmp6};
+use crate::procfs::{parse_net_snmp, parse_net_snmp6, ProcReader};
 
 const SNMP_PATH: &str = "/proc/net/snmp";
 // IPv6 counters live in a separate file with a different format (one
@@ -129,10 +129,10 @@ fn record_snmp6(
     }
 }
 
-pub struct IpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
+pub struct IpSampler { interval: Duration, r4: ProcReader, r6: ProcReader, ids: HashMap<&'static str, MetricId> }
 impl IpSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        IpSampler { interval, ids: HashMap::new() }
+        IpSampler { interval, r4: ProcReader::new(SNMP_PATH), r6: ProcReader::new(SNMP6_PATH), ids: HashMap::new() }
     }
 }
 #[async_trait::async_trait]
@@ -140,12 +140,12 @@ impl Sampler for IpSampler {
     fn name(&self) -> &str { "ip" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string(SNMP_PATH)?;
+        let text = self.r4.read()?;
         let parsed = parse_net_snmp(&text);
         ingest_parsed(reg, now, &parsed, "Ip",   IP_METRICS,   &mut self.ids);
         ingest_parsed(reg, now, &parsed, "Icmp", ICMP_METRICS, &mut self.ids);
         // snmp6 is absent when IPv6 is disabled — skip silently, don't error.
-        if let Ok(text6) = std::fs::read_to_string(SNMP6_PATH) {
+        if let Ok(text6) = self.r6.read() {
             let fields = parse_net_snmp6(&text6);
             record_snmp6(reg, now, &fields, IP6_METRICS,   &mut self.ids);
             record_snmp6(reg, now, &fields, ICMP6_METRICS, &mut self.ids);
@@ -154,10 +154,10 @@ impl Sampler for IpSampler {
     }
 }
 
-pub struct TcpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
+pub struct TcpSampler { interval: Duration, r4: ProcReader, ids: HashMap<&'static str, MetricId> }
 impl TcpSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        TcpSampler { interval, ids: HashMap::new() }
+        TcpSampler { interval, r4: ProcReader::new(SNMP_PATH), ids: HashMap::new() }
     }
 }
 #[async_trait::async_trait]
@@ -165,17 +165,17 @@ impl Sampler for TcpSampler {
     fn name(&self) -> &str { "tcp" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string(SNMP_PATH)?;
+        let text = self.r4.read()?;
         let parsed = parse_net_snmp(&text);
         ingest_parsed(reg, now, &parsed, "Tcp", &TCP_METRICS, &mut self.ids);
         Ok(())
     }
 }
 
-pub struct UdpSampler { interval: Duration, ids: HashMap<&'static str, MetricId> }
+pub struct UdpSampler { interval: Duration, r4: ProcReader, r6: ProcReader, ids: HashMap<&'static str, MetricId> }
 impl UdpSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        UdpSampler { interval, ids: HashMap::new() }
+        UdpSampler { interval, r4: ProcReader::new(SNMP_PATH), r6: ProcReader::new(SNMP6_PATH), ids: HashMap::new() }
     }
 }
 #[async_trait::async_trait]
@@ -183,10 +183,10 @@ impl Sampler for UdpSampler {
     fn name(&self) -> &str { "udp" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string(SNMP_PATH)?;
+        let text = self.r4.read()?;
         let parsed = parse_net_snmp(&text);
         ingest_parsed(reg, now, &parsed, "Udp", &UDP_METRICS, &mut self.ids);
-        if let Ok(text6) = std::fs::read_to_string(SNMP6_PATH) {
+        if let Ok(text6) = self.r6.read() {
             let fields = parse_net_snmp6(&text6);
             record_snmp6(reg, now, &fields, UDP6_METRICS, &mut self.ids);
         }

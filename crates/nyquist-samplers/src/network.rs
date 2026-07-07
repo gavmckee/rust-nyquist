@@ -3,11 +3,11 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, Labels, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
-use crate::procfs::parse_net_dev;
+use crate::procfs::{parse_net_dev, ProcReader};
 
 pub struct NetworkSampler {
     interval: Duration,
-    path: String,
+    reader: ProcReader,
     // (iface, driver, mtu_str) -> [rx_bytes, rx_errors, rx_dropped, tx_bytes, tx_errors, tx_dropped]
     ids: HashMap<(String, String, String), [MetricId; 6]>,
     // iface -> (driver, mtu) — refreshed every 60s via ethtool
@@ -20,7 +20,7 @@ impl NetworkSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
         NetworkSampler {
             interval,
-            path: "/proc/net/dev".to_string(),
+            reader: ProcReader::new("/proc/net/dev"),
             ids: HashMap::new(),
             context: HashMap::new(),
             context_next: None,
@@ -76,7 +76,7 @@ impl Sampler for NetworkSampler {
     fn name(&self) -> &str { "network" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string(&self.path)?;
+        let text = self.reader.read()?;
         self.ingest(reg, now, &text);
         Ok(())
     }

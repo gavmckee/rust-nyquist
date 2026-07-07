@@ -2,16 +2,18 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
+use crate::procfs::ProcReader;
 use crate::procfs::parse_loadavg;
 
 pub struct LoadAvgSampler {
     interval: Duration,
+    reader: ProcReader,
     ids: Option<[MetricId; 3]>,
 }
 
 impl LoadAvgSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        LoadAvgSampler { interval, ids: None }
+        LoadAvgSampler { interval, reader: ProcReader::new("/proc/loadavg"), ids: None }
     }
 
     fn ingest(&mut self, reg: &Registry, now: Instant, text: &str) {
@@ -32,7 +34,7 @@ impl Sampler for LoadAvgSampler {
     fn name(&self) -> &str { "loadavg" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string("/proc/loadavg")?;
+        let text = self.reader.read()?;
         self.ingest(reg, now, &text);
         Ok(())
     }

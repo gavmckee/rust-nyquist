@@ -2,16 +2,18 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
+use crate::procfs::ProcReader;
 use crate::procfs::parse_sockstat;
 
 pub struct SockstatSampler {
     interval: Duration,
+    reader: ProcReader,
     ids: Option<[MetricId; 4]>,
 }
 
 impl SockstatSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        SockstatSampler { interval, ids: None }
+        SockstatSampler { interval, reader: ProcReader::new("/proc/net/sockstat"), ids: None }
     }
 
     fn ingest(&mut self, reg: &Registry, now: Instant, text: &str) {
@@ -34,7 +36,7 @@ impl Sampler for SockstatSampler {
     fn name(&self) -> &str { "sockstat" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string("/proc/net/sockstat")?;
+        let text = self.reader.read()?;
         self.ingest(reg, now, &text);
         Ok(())
     }

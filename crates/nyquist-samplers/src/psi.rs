@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
-use crate::procfs::parse_psi;
+use crate::procfs::{parse_psi, ProcReader};
 
 const RESOURCES: &[(&str, &str)] = &[
     ("cpu",    "/proc/pressure/cpu"),
@@ -13,12 +13,15 @@ const RESOURCES: &[(&str, &str)] = &[
 
 pub struct PsiSampler {
     interval: Duration,
+    // One kept-fd reader per pressure file (parallel to RESOURCES).
+    readers: Vec<ProcReader>,
     ids: HashMap<String, MetricId>,
 }
 
 impl PsiSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        PsiSampler { interval, ids: HashMap::new() }
+        let readers = RESOURCES.iter().map(|&(_, path)| ProcReader::new(path)).collect();
+        PsiSampler { interval, readers, ids: HashMap::new() }
     }
 
     fn id(&mut self, reg: &Registry, name: &str) -> MetricId {
@@ -52,9 +55,10 @@ impl Sampler for PsiSampler {
     fn name(&self) -> &str { "psi" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        for (resource, path) in RESOURCES {
-            match std::fs::read_to_string(path) {
+        for (i, (resource, _)) in RESOURCES.iter().enumerate() {
+            match self.readers[i].read() {
                 Ok(text) => self.push_resource(reg, now, resource, &text),
+                // PSI disabled (CONFIG_PSI=n) or a resource absent: tolerate.
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => return Err(Box::new(e)),
             }

@@ -3,10 +3,12 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
+use crate::procfs::ProcReader;
 use crate::procfs::parse_softirqs;
 
 pub struct SoftirqSampler {
     interval: Duration,
+    reader: ProcReader,
     // keyed by the raw softirq name (e.g. "NET_RX") so steady-state ticks
     // skip the format!/to_lowercase metric-name build entirely.
     ids: HashMap<String, MetricId>,
@@ -14,7 +16,7 @@ pub struct SoftirqSampler {
 
 impl SoftirqSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        SoftirqSampler { interval, ids: HashMap::new() }
+        SoftirqSampler { interval, reader: ProcReader::new("/proc/softirqs"), ids: HashMap::new() }
     }
 
     fn id(&mut self, reg: &Registry, irq_type: &str) -> MetricId {
@@ -32,7 +34,7 @@ impl Sampler for SoftirqSampler {
     fn interval(&self) -> Duration { self.interval }
 
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string("/proc/softirqs")?;
+        let text = self.reader.read()?;
         for (irq_type, total) in parse_softirqs(&text) {
             let id = self.id(reg, &irq_type);
             reg.record_counter(id, now, total);

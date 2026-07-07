@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
+use crate::procfs::ProcReader;
 use crate::procfs::parse_net_snmp;
 
 // Key TCP health signals from /proc/net/netstat (TcpExt section).
@@ -43,13 +44,14 @@ const TCPEXT_METRICS: &[(&str, &str)] = &[
 
 pub struct NetstatSampler {
     interval: Duration,
+    reader: ProcReader,
     // metric name -> id: register only on first sight, zero allocations after.
     ids: HashMap<&'static str, MetricId>,
 }
 
 impl NetstatSampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        NetstatSampler { interval, ids: HashMap::new() }
+        NetstatSampler { interval, reader: ProcReader::new("/proc/net/netstat"), ids: HashMap::new() }
     }
 }
 
@@ -59,7 +61,7 @@ impl Sampler for NetstatSampler {
     fn interval(&self) -> Duration { self.interval }
 
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string("/proc/net/netstat")?;
+        let text = self.reader.read()?;
         let parsed = parse_net_snmp(&text);
         let Some(fields) = parsed.get("TcpExt") else { return Ok(()) };
         for (name, snmp_field) in TCPEXT_METRICS {

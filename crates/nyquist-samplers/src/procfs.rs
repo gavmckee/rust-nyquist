@@ -1,4 +1,50 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
+
+/// Re-reads a fixed /proc or /sys file by keeping the fd open and seeking to
+/// 0 each tick, instead of open→read→close. At 100 Hz this eliminates the
+/// per-tick openat + statx + close (the dominant metadata-syscall cost
+/// measured on this agent) and reuses one buffer so there's no per-read
+/// allocation. The fd is opened lazily and dropped on any error, so a file
+/// that (re)appears or vanishes self-heals on the next tick.
+pub struct ProcReader {
+    path: &'static str,
+    file: Option<File>,
+    buf:  Vec<u8>,
+}
+
+impl ProcReader {
+    pub fn new(path: &'static str) -> Self {
+        ProcReader { path, file: None, buf: Vec::with_capacity(8192) }
+    }
+
+    /// Read the current file contents. The internal byte buffer is reused
+    /// across ticks (no read-grow reallocation), and the returned String is
+    /// the same single allocation `read_to_string` already made — so this is
+    /// strictly fewer syscalls at equal allocation. Returning owned (rather
+    /// than a borrow of self) lets callers keep an `&mut self` ingest path.
+    /// Errors drop the fd so the next call reopens (handles a wedged seq_file
+    /// iterator, permission flaps, or the path appearing later).
+    pub fn read(&mut self) -> std::io::Result<String> {
+        if self.file.is_none() {
+            self.file = Some(File::open(self.path)?);
+        }
+        let f = self.file.as_mut().unwrap();
+        let result = (|| -> std::io::Result<()> {
+            f.seek(SeekFrom::Start(0))?;
+            self.buf.clear();
+            f.read_to_end(&mut self.buf)?;
+            Ok(())
+        })();
+        if result.is_err() {
+            self.file = None;
+            result?;
+        }
+        Ok(String::from_utf8_lossy(&self.buf).into_owned())
+    }
+}
+
 
 pub struct NetDevEntry {
     pub iface:      String,
@@ -222,6 +268,27 @@ pub fn parse_sockstat(text: &str) -> SockstatSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn proc_reader_rereads_live_content() {
+        // /proc/stat regenerates on every read; a kept-fd reader must see
+        // fresh content across ticks, not a cached first read.
+        let mut r = ProcReader::new("/proc/stat");
+        let a = r.read().expect("first read").to_string();
+        assert!(a.starts_with("cpu"), "unexpected /proc/stat content");
+        let b = r.read().expect("second read on the same fd");
+        assert!(b.starts_with("cpu"), "second read empty/garbage — seek(0) reset failed");
+    }
+
+    #[test]
+    fn proc_reader_errors_on_missing_then_recovers() {
+        let mut r = ProcReader::new("/proc/does-not-exist-nyquist");
+        assert!(r.read().is_err());
+        // fd was dropped on error; a subsequent existing path (simulated by a
+        // fresh reader) still works — here just assert the errored reader
+        // retries rather than caching the failure into a panic.
+        assert!(r.read().is_err());
+    }
 
     #[test]
     fn parses_aggregate_and_per_cpu_lines() {

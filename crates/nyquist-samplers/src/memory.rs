@@ -3,18 +3,18 @@ use std::time::{Duration, Instant};
 use nyquist_core::model::{Kind, MetricId, Unit};
 use nyquist_core::registry::{MetricDef, Registry};
 use nyquist_core::sampler::{Sampler, SamplerError};
-use crate::procfs::parse_meminfo;
+use crate::procfs::{parse_meminfo, ProcReader};
 
 pub struct MemorySampler {
     interval: Duration,
-    path: String,
+    reader: ProcReader,
     // meminfo field name -> id: format!/register only on first sight of a key.
     ids: HashMap<String, MetricId>,
 }
 
 impl MemorySampler {
     pub fn new(_reg: &Registry, interval: Duration) -> Self {
-        MemorySampler { interval, path: "/proc/meminfo".to_string(), ids: HashMap::new() }
+        MemorySampler { interval, reader: ProcReader::new("/proc/meminfo"), ids: HashMap::new() }
     }
     fn ingest(&mut self, reg: &Registry, now: Instant, text: &str) {
         for (key, bytes) in parse_meminfo(text) {
@@ -43,7 +43,7 @@ impl Sampler for MemorySampler {
     fn name(&self) -> &str { "memory" }
     fn interval(&self) -> Duration { self.interval }
     async fn sample(&mut self, reg: &Registry, now: Instant) -> Result<(), SamplerError> {
-        let text = std::fs::read_to_string(&self.path)?;
+        let text = self.reader.read()?;
         self.ingest(reg, now, &text);
         Ok(())
     }
