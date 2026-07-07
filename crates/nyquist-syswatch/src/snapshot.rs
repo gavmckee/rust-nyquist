@@ -54,6 +54,14 @@ fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
                         || rest.ends_with(&format!(".{leaf}"))))
         });
     }
+    // Steering keys (rps.<if>.rx-N / xps.<if>.tx-N / irq.<if>.N) share the
+    // "<class>.<iface>.<field>" shape with the ethtool-domain keys below, so
+    // they MUST be resolved first and exclusively: otherwise any ethtool/
+    // ethnl event on the same interface (lldpd triggers these) would claim a
+    // steering change via the iface fallback. Only fswatch can claim them.
+    if ["rps.", "xps.", "irq."].iter().any(|p| key.starts_with(p)) {
+        return events.iter().find(|e| matches!(e.scope, AttrScope::Steering));
+    }
     // Interface-scoped keys: "<class>.<iface>" or "<class>.<iface>.<field>".
     let iface_of_key = key.split('.').nth(1);
     let ethtool_domain = ["ring.", "channels.", "coalesce.", "rss.", "msix."]
@@ -73,12 +81,6 @@ fn resolve<'a>(key: &str, events: &'a [EventAttr]) -> Option<&'a EventAttr> {
         .or_else(|| {
             events.iter().find(|e| {
                 matches!(e.scope, AttrScope::Link) && key.starts_with("mtu.")
-            })
-        })
-        .or_else(|| {
-            let steering_key = ["rps.", "xps.", "irq."].iter().any(|p| key.starts_with(p));
-            events.iter().find(|e| {
-                matches!(e.scope, AttrScope::Steering) && steering_key
             })
         })
 }
@@ -256,6 +258,24 @@ mod tests {
         assert_eq!(resolve("irq.ens1f0np0.211", &events).unwrap().comm, "fswatch");
         assert!(resolve("ring.ens1f0np0.rx", &events).is_none());
         assert!(resolve("sysctl.rmem_max", &events).is_none());
+    }
+
+    #[test]
+    fn iface_event_cannot_steal_a_steering_key() {
+        // Regression (caught live): a steering key shares the
+        // <class>.<iface>.<field> shape with ethtool-domain keys, so an
+        // ethtool/ethnl event on the same interface in the same drain window
+        // (lldpd triggers these) must NOT claim the rps change.
+        let events = vec![
+            ev(1068578, "lldpd", AttrScope::Iface { name: "ens1f0np0".into() }),
+            ev(0, "fswatch", AttrScope::Steering),
+        ];
+        assert_eq!(resolve("rps.ens1f0np0.rx-0", &events).unwrap().comm, "fswatch");
+        // And the ethtool event still owns its own domain key.
+        assert_eq!(resolve("ring.ens1f0np0.rx", &events).unwrap().comm, "lldpd");
+        // A steering key with no fswatch event is unclaimed, never stolen.
+        let only_iface = vec![ev(1, "lldpd", AttrScope::Iface { name: "ens1f0np0".into() })];
+        assert!(resolve("rps.ens1f0np0.rx-0", &only_iface).is_none());
     }
 
     #[test]
