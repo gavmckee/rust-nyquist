@@ -1539,6 +1539,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "nyquist-explorer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrow-array",
+ "axum",
+ "clap",
+ "nyquist-core",
+ "nyquist-recorder",
+ "parquet",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tower",
+]
+
+[[package]]
 name = "nyquist-exposition"
 version = "0.1.0"
 dependencies = [

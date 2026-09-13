@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Nyquist · Recording Explorer</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/" aria-label="Nyquist explorer"
+        ><span class="mark">∿</span> NYQUIST
+        <span class="subbrand">/ EXPLORER</span></a
+      ><span class="badge">PARQUET RECORDINGS</span>
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">FROM RECORDING TO INSIGHT</p>
+          <h1>See what happened.</h1>
+          <p class="muted">
+            Explore system telemetry, isolate a series, and inspect the moments
+            that matter.
+          </p>
+        </div>
+        <button id="clear" class="quiet" disabled>Clear session</button>
+      </section>
+      <section class="source-panel">
+        <div
+          id="dropzone"
+          tabindex="0"
+          role="button"
+          aria-label="Open Parquet recordings"
+        >
+          <span class="upload-icon">↥</span>
+          <div>
+            <strong>Open a recording</strong>
+            <p>
+              Drop .parquet files here or <span class="link">browse files</span>
+            </p>
+            <small
+              >Multiple recordings · up to 128 MiB / 100,000 rows per
+              file</small
+            >
+          </div>
+          <input id="upload" type="file" accept=".parquet" multiple hidden />
+        </div>
+        <div class="server">
+          <label for="server-file">OR OPEN FROM SERVER</label>
+          <div class="inline">
+            <select id="server-file">
+              <option value="">No server recordings</option></select
+            ><button id="open-server" disabled>Open</button
+            ><button
+              id="refresh"
+              class="quiet"
+              aria-label="Refresh server files"
+            >
+              ↻
+            </button>
+          </div>
+          <small id="server-hint">Reading available recordings…</small>
+        </div>
+      </section>
+      <p id="status" role="status" aria-live="polite">
+        Ready to explore. Your source files are never modified.
+      </p>
+      <div id="file-chips" class="chips"></div>
+      <section class="stats" aria-label="Recording overview">
+        <div><span>OBSERVATIONS</span><strong id="row-count">—</strong></div>
+        <div><span>METRICS</span><strong id="metric-count">—</strong></div>
+        <div>
+          <span>LABELED SERIES</span><strong id="series-count">—</strong>
+        </div>
+        <div><span>RECORDING SPAN · UTC</span><strong id="span">—</strong></div>
+      </section>
+      <section id="empty" class="empty">
+        <div class="empty-wave">▁▂▁▃▆▃▂▁▂▅▇▅▂▁</div>
+        <h2>Your recording, in context.</h2>
+        <p>
+          Load a file to compare raw values and percentiles across CPUs,
+          interfaces, queues, and more.
+        </p>
+      </section>
+      <section id="workspace" hidden>
+        <div class="explore-grid">
+          <aside>
+            <p class="eyebrow">METRIC LIBRARY</p>
+            <input
+              id="search"
+              type="search"
+              placeholder="Search metrics…"
+              aria-label="Search metrics"
+            />
+            <div id="metric-list" class="metric-list"></div>
+          </aside>
+          <div class="analysis">
+            <div class="plot-heading">
+              <div>
+                <p class="eyebrow" id="metric-kind">METRIC</p>
+                <h2 id="metric-title"></h2>
+              </div>
+              <select id="measure" aria-label="Value to plot">
+                <option value="p99">p99</option>
+                <option value="p50">p50</option>
+                <option value="p90">p90</option>
+                <option value="p999">p99.9</option>
+                <option value="raw">Raw value</option>
+                <option value="rate">Counter rate</option>
+              </select>
+            </div>
+            <div class="filters">
+              <label
+                >FROM · UTC<input
+                  id="from"
+                  type="datetime-local"
+                  step="0.001" /></label
+              ><label
+                >TO · UTC<input
+                  id="to"
+                  type="datetime-local"
+                  step="0.001" /></label
+              ><button id="reset-range" class="quiet">Reset range</button>
+            </div>
+            <div id="label-filters" class="label-filters"></div>
+            <p id="plot-note" class="muted"></p>
+            <div class="chart-wrap">
+              <canvas id="chart" aria-label="Metric time series chart"></canvas>
+              <div id="tooltip" hidden></div>
+              <p id="chart-empty" hidden>No observations in this selection.</p>
+            </div>
+            <div id="legend" class="legend"></div>
+          </div>
+        </div>
+        <section class="table-panel">
+          <div class="table-heading">
+            <div>
+              <p class="eyebrow">INSPECT THE VALUES</p>
+              <h2>Observations <span id="filtered-count"></span></h2>
+            </div>
+            <button id="export">↓ Export filtered CSV</button>
+          </div>
+          <p class="muted">
+            Exact integer values. Percentiles describe each recorded sliding
+            window; empty histograms are shown as —.
+          </p>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time · UTC</th>
+                  <th>Labels</th>
+                  <th>Raw</th>
+                  <th>p50</th>
+                  <th>p90</th>
+                  <th>p99</th>
+                  <th>p99.9</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button id="prev" class="quiet">← Previous</button
+            ><span id="page"></span
+            ><button id="next" class="quiet">Next →</button>
+          </div>
+        </section>
+      </section>
+      <footer>
+        Nyquist Recording Explorer
+        <span
+          >Read-only analysis · No external services or CDN dependencies</span
+        >
+      </footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
