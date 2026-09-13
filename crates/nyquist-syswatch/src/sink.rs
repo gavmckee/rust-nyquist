@@ -1,9 +1,9 @@
-use std::time::UNIX_EPOCH;
 use clickhouse::Client;
 use crate::snapshot::Change;
 
 pub struct Sink {
     client:      Client,
+    base: Client,
     database:    String,
     initialized: bool,
 }
@@ -15,11 +15,14 @@ impl Sink {
             .with_database(database)
             .with_user(username)
             .with_password(password);
-        Sink { client, database: database.to_string(), initialized: false }
+        Sink { base: Client::default().with_url(url).with_user(username).with_password(password), client, database: database.to_string(), initialized: false }
     }
 
     pub async fn ensure_tables(&mut self) -> anyhow::Result<()> {
         if self.initialized { return Ok(()); }
+
+        self.base.query(&format!("CREATE DATABASE IF NOT EXISTS {}", self.database))
+            .execute().await?;
 
         // Use the same sysconfig_changes table as the polling ConfigWatcher so
         // both event sources appear together in Grafana annotation queries.
@@ -43,14 +46,9 @@ impl Sink {
 
     pub async fn insert_changes(
         &self,
-        changes: &[Change],
+        changes: &[(i64, Change)],
     ) -> anyhow::Result<()> {
         if changes.is_empty() { return Ok(()); }
-
-        let ts_ms = std::time::SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
 
         let host = hostname();
         let mut sql = format!(
@@ -59,7 +57,7 @@ impl Sink {
             self.database
         );
 
-        for (i, c) in changes.iter().enumerate() {
+        for (i, (ts_ms, c)) in changes.iter().enumerate() {
             if i > 0 { sql.push(','); }
             let note = format!(
                 "{}: {} → {}  (pid={}, comm={})",

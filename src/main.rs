@@ -120,7 +120,8 @@ async fn main() -> anyhow::Result<()> {
                 &ch.password,
                 std::time::Duration::from_secs(5),
             );
-            tokio::spawn(async move { watcher.run().await });
+            let shutdown = shutdown_rx.clone();
+            sink_handles.push(tokio::spawn(async move { watcher.run(shutdown).await }));
         }
         tracing::info!(url = %ch.url, database = %ch.database, "ClickHouse sink enabled");
     }
@@ -131,11 +132,12 @@ async fn main() -> anyhow::Result<()> {
             let watcher = nyquist_syswatch::SysWatcher::new(
                 &ch.url, &ch.database, &ch.username, &ch.password,
             );
-            tokio::spawn(async move {
-                if let Err(e) = watcher.run().await {
+            let shutdown = shutdown_rx.clone();
+            sink_handles.push(tokio::spawn(async move {
+                if let Err(e) = watcher.run(shutdown).await {
                     tracing::error!(error = %e, "syswatch exited");
                 }
-            });
+            }));
             tracing::info!("syswatch enabled (BPF hooks + 60s poll fallback)");
         } else {
             tracing::warn!("syswatch requires [clickhouse] enabled = true");

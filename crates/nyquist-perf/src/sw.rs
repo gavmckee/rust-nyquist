@@ -22,7 +22,7 @@ pub struct SoftwareSampler {
     interval: Duration,
     num_cpus: usize,
     #[cfg(target_os = "linux")]
-    groups:      Vec<(Vec<MetricId>, PerfGroup)>,
+    groups:      Vec<(Vec<MetricId>, MetricId, PerfGroup)>,
     #[cfg(target_os = "linux")]
     scratch:     Vec<u64>,
     #[cfg(target_os = "linux")]
@@ -73,7 +73,10 @@ impl SoftwareSampler {
                         .labels(Labels::new().insert("cpu", &cpu_label)),
                 )
             }).collect();
-            self.groups.push((ids, group));
+            let coverage = reg.register(MetricDef::new("nyquist/perf/running_percent", Kind::Gauge)
+                    .unit(Unit::Percent).labels(Labels::new().insert("source", "software")
+                        .insert("cpu", &cpu_label).insert("group", self.groups.len().to_string())));
+                self.groups.push((ids, coverage, group));
         }
         Ok(())
     }
@@ -102,8 +105,9 @@ impl Sampler for SoftwareSampler {
                     return Err(Box::new(e));
                 }
             }
-            for (ids, group) in &mut self.groups {
+            for (ids, coverage, group) in &mut self.groups {
                 group.read_into(&mut self.scratch)?;
+                reg.record_gauge(*coverage, now, group.running_percent);
                 for (id, &v) in ids.iter().zip(&self.scratch) {
                     reg.record_counter(*id, now, v);
                 }

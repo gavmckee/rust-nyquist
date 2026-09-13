@@ -21,3 +21,5 @@ pub mod scheduler;
 pub mod registration;
 pub use sampler::{Sampler, SamplerError};
 pub use scheduler::spawn_sampler;
+
+pub mod pending;

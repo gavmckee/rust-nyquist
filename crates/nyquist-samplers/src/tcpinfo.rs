@@ -167,6 +167,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn busy_service_preserves_late_connections_and_ticks() {
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(1));
+        let mut s = TcpInfoSampler::new(&reg, Duration::from_millis(10));
+        let t = Instant::now();
+        for tick in 0..10 {
+            let conns = (1..=100).map(|inode| TcpStats {
+                sport: 443, dport: 54000, inode,
+                rtt_us: if inode <= 20 { 100 } else { 10_000 }, total_retrans: 0,
+            }).collect();
+            s.process(&reg, t + Duration::from_millis(tick * 10), conns);
+        }
+        let id = s.rtt_id(&reg, 443);
+        let now = t + Duration::from_millis(99);
+        assert!(reg.percentile(id, now, 99.0) >= 10_000);
+        let snap = reg.snapshot(now);
+        let metric = snap.metrics.iter().find(|m| m.name == "tcp/rtt_us").unwrap();
+        assert_eq!(metric.buckets.iter().map(|b| b.1).sum::<u64>(), 1000);
+    }
+
+    #[test]
     fn service_port_heuristic() {
         const FLOOR: u16 = 32768; // Linux default ip_local_port_range lower bound
         assert_eq!(service_port(80, 54321, FLOOR), Some(80));    // server at 80

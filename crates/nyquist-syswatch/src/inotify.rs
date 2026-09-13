@@ -24,29 +24,29 @@ impl InotifyWatcher {
     /// Spawn the self-contained watcher thread. Failure to create the
     /// inotify instance is fatal to the watcher only, not the caller.
     #[cfg(target_os = "linux")]
-    pub fn spawn(tx: SyncSender<SwEvent>) -> anyhow::Result<()> {
+    pub fn spawn(tx: SyncSender<SwEvent>, stop: std::sync::Arc<std::sync::atomic::AtomicBool>) -> anyhow::Result<()> {
         let fd = unsafe { libc::inotify_init1(libc::IN_CLOEXEC | libc::IN_NONBLOCK) };
         anyhow::ensure!(fd >= 0, "inotify_init1: {}", std::io::Error::last_os_error());
         std::thread::Builder::new()
             .name("nyquist-fswatch".into())
-            .spawn(move || run(fd, tx))?;
+            .spawn(move || run(fd, tx, stop))?;
         Ok(())
     }
 
     #[cfg(not(target_os = "linux"))]
-    pub fn spawn(_tx: SyncSender<SwEvent>) -> anyhow::Result<()> {
+    pub fn spawn(_tx: SyncSender<SwEvent>, _stop: std::sync::Arc<std::sync::atomic::AtomicBool>) -> anyhow::Result<()> {
         Ok(())
     }
 }
 
 #[cfg(target_os = "linux")]
-fn run(fd: i32, tx: SyncSender<SwEvent>) {
+fn run(fd: i32, tx: SyncSender<SwEvent>, stop: std::sync::Arc<std::sync::atomic::AtomicBool>) {
     use crate::event::SW_SRC_FSWATCH;
     use std::time::{Duration, Instant};
 
     let mut buf = [0u8; 4096];
     let mut last_scan: Option<Instant> = None;
-    loop {
+    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
         if last_scan.is_none_or(|t| t.elapsed() >= Duration::from_secs(60)) {
             refresh_watches(fd);
             last_scan = Some(Instant::now());
@@ -54,7 +54,7 @@ fn run(fd: i32, tx: SyncSender<SwEvent>) {
 
         // Bounded poll so the watch-list rescan runs even when idle.
         let mut pfd = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
-        let rc = unsafe { libc::poll(&mut pfd, 1, 5000) };
+        let rc = unsafe { libc::poll(&mut pfd, 1, 200) };
         if rc <= 0 { continue; }
 
         // Drain everything queued; N rapid writes still mean ONE refresh.
@@ -73,6 +73,7 @@ fn run(fd: i32, tx: SyncSender<SwEvent>) {
             let _ = tx.try_send(ev);
         }
     }
+    unsafe { libc::close(fd); }
 }
 
 /// (Re-)add watches for every current steering file. inotify_add_watch is

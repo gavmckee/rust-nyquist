@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 use std::time::Duration;
-use anyhow::Context;
+use nyquist_core::pending::Pending;
+use tokio::sync::watch;
 use tracing::{info, warn};
 use crate::event::{SW_SRC_ETHTOOL, SW_SRC_FSWATCH, SW_SRC_RTNETLINK, SW_SRC_SYSCTL, SwEvent};
 use crate::inotify::InotifyWatcher;
@@ -24,9 +25,12 @@ impl SysWatcher {
         }
     }
 
-    pub async fn run(self) -> anyhow::Result<()> {
+    pub async fn run(self, mut shutdown: watch::Receiver<bool>) -> anyhow::Result<()> {
         let mut sink = Sink::new(&self.ch_url, &self.ch_db, &self.ch_user, &self.ch_pass);
-        sink.ensure_tables().await.context("syswatch: ClickHouse table init")?;
+        if !initialize(&mut sink, &mut shutdown).await { return Ok(()); }
+        let mut pending = Pending::new(10_000);
+        // Dropping this guard on errors/abort also stops the polling thread.
+        let stop = StopPolling(std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)));
 
         // Take an initial snapshot so we have old_values for the first diff.
         let initial = tokio::task::spawn_blocking(nyquist_sysconfig::collect).await?;
@@ -38,14 +42,14 @@ impl SysWatcher {
 
         // fswatch (inotify) covers steering files BPF cannot: RPS/XPS masks
         // and IRQ affinities. Failure is non-fatal — the 60s poll remains.
-        if let Err(e) = InotifyWatcher::spawn(tx.clone()) {
+        if let Err(e) = InotifyWatcher::spawn(tx.clone(), stop.0.clone()) {
             warn!(error = %e, "syswatch: fswatch unavailable — steering changes fall to the 60s poll");
         }
 
         // Try to load BPF programs. Failure is non-fatal — we still run the
         // 60s polling fallback so config changes are never silently missed.
         #[cfg(target_os = "linux")]
-        let _bpf_active = match crate::bpf::BpfState::load(tx) {
+        let bpf_task = match crate::bpf::BpfState::load(tx) {
             Ok((state, report)) => {
                 let fmt = |r: &Result<(), String>| match r {
                     Ok(()) => "ok",
@@ -62,33 +66,39 @@ impl SysWatcher {
                 if let Err(e) = &report.ethtool   { warn!(error = %e, "syswatch: ethtool hook"); }
                 if let Err(e) = &report.ethnl     { warn!(error = %e, "syswatch: ethnl hook"); }
                 if let Err(e) = &report.rtnetlink { warn!(error = %e, "syswatch: rtnetlink hook"); }
-                tokio::task::spawn_blocking(move || loop {
+                let stop_flag = stop.0.clone();
+                Some(tokio::task::spawn_blocking(move || poll_until_stopped(stop_flag, || {
                     if let Err(e) = state.poll(Duration::from_millis(200)) {
                         warn!(error = %e, "syswatch: ring buffer poll error");
+                        std::thread::sleep(Duration::from_millis(200));
                     }
-                });
-                true
+                })))
             }
             Err(e) => {
                 warn!(error = %e, "syswatch: BPF load failed — running poll-only fallback");
-                false
+                None
             }
         };
 
         #[cfg(not(target_os = "linux"))]
-        let bpf_active = false;
+        let bpf_task: Option<tokio::task::JoinHandle<()>> = None;
 
         let mut refresh = tokio::time::interval(Duration::from_secs(60));
         refresh.tick().await; // discard the immediate first tick
 
+        let mut retry = tokio::time::interval(Duration::from_secs(5));
         loop {
+            if *shutdown.borrow() { break; }
             tokio::select! {
+                _ = shutdown.changed() => break,
+                _ = retry.tick() => flush(&mut sink, &mut pending).await,
                 _ = refresh.tick() => {
                     // Periodic full re-read: catches anything missed (inotify
                     // paths not yet watched, events during BPF load window).
                     let cfg = tokio::task::spawn_blocking(nyquist_sysconfig::collect).await?;
                     let changes = snapshot.diff_and_update(&cfg, 0, "poll");
-                    flush(&mut sink, &changes).await;
+                    for change in changes { pending.push((unix_ms(), change)); }
+                    flush(&mut sink, &mut pending).await;
                 }
 
                 // Drain BPF events without blocking the async executor.
@@ -163,7 +173,8 @@ impl SysWatcher {
                                 "syswatch: config change detected"
                             );
                         }
-                        flush(&mut sink, &changes).await;
+                        for change in changes { pending.push((unix_ms(), change)); }
+                        flush(&mut sink, &mut pending).await;
                     } else {
                         // No BPF events this tick — yield briefly to avoid busy-looping.
                         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -171,12 +182,127 @@ impl SysWatcher {
                 }
             }
         }
+        stop.0.store(true, std::sync::atomic::Ordering::Relaxed);
+        if let Some(task) = bpf_task { task.await?; }
+        flush(&mut sink, &mut pending).await;
+        Ok(())
     }
 }
 
-async fn flush(sink: &mut Sink, changes: &[Change]) {
-    if changes.is_empty() { return; }
-    if let Err(e) = sink.insert_changes(changes).await {
-        warn!(error = %e, count = changes.len(), "syswatch: failed to insert changes");
+async fn initialize(sink: &mut Sink, shutdown: &mut watch::Receiver<bool>) -> bool {
+    loop {
+        if *shutdown.borrow() { return false; }
+        tokio::select! {
+            _ = shutdown.changed() => return false,
+            result = tokio::time::timeout(Duration::from_secs(3), sink.ensure_tables()) => {
+                if matches!(result, Ok(Ok(()))) { return true; }
+                warn!(?result, "syswatch: table init failed, retrying");
+            }
+        }
+        tokio::select! {
+            _ = shutdown.changed() => return false,
+            _ = tokio::time::sleep(Duration::from_secs(5)) => {}
+        }
+    }
+}
+
+async fn flush(sink: &mut Sink, pending: &mut Pending<(i64, Change)>) {
+    if pending.entries().is_empty() { return; }
+    match tokio::time::timeout(Duration::from_secs(3), sink.insert_changes(pending.entries())).await {
+        Ok(Ok(())) => pending.acknowledge(),
+        result => warn!(?result, retained = pending.entries().len(), dropped_total = pending.dropped(),
+            "syswatch: insert failed; retaining changes for retry"),
+    }
+}
+
+fn unix_ms() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default().as_millis() as i64
+}
+
+struct StopPolling(std::sync::Arc<std::sync::atomic::AtomicBool>);
+impl Drop for StopPolling {
+    fn drop(&mut self) { self.0.store(true, std::sync::atomic::Ordering::Relaxed); }
+}
+
+fn poll_until_stopped(stop: std::sync::Arc<std::sync::atomic::AtomicBool>, mut poll: impl FnMut()) {
+    while !stop.load(std::sync::atomic::Ordering::Relaxed) { poll(); }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    async fn mock_clickhouse() -> (String, std::sync::Arc<std::sync::Mutex<Vec<String>>>, tokio::task::JoinHandle<()>) {
+        let requests = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = requests.clone();
+        let app = axum::Router::new().route("/", axum::routing::post(move |body: String| {
+            let seen = seen.clone();
+            async move {
+                let mut requests = seen.lock().unwrap();
+                requests.push(body);
+                if requests.len() == 1 { (axum::http::StatusCode::SERVICE_UNAVAILABLE, "temporary failure") }
+                else { (axum::http::StatusCode::OK, "") }
+            }
+        }));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+        (url, requests, task)
+    }
+
+    #[tokio::test]
+    async fn startup_retries_and_creates_database_before_table() {
+        let (url, requests, server) = mock_clickhouse().await;
+        let mut sink = Sink::new(&url, "test", "default", "");
+        let (_tx, mut rx) = watch::channel(false);
+        assert!(tokio::time::timeout(Duration::from_secs(10), initialize(&mut sink, &mut rx)).await.unwrap());
+        let requests = requests.lock().unwrap();
+        assert!(requests[0].contains("CREATE DATABASE"));
+        assert!(requests[1].contains("CREATE DATABASE"));
+        assert!(requests[2].contains("CREATE TABLE"));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn failed_insert_retries_original_events_and_timestamps() {
+        let (url, requests, server) = mock_clickhouse().await;
+        let mut sink = Sink::new(&url, "test", "default", "");
+        let mut pending = Pending::new(10);
+        pending.push((1234, Change { key: "mtu".into(), old_value: "1500".into(),
+            new_value: "9000".into(), pid: 1, comm: "test".into() }));
+        flush(&mut sink, &mut pending).await;
+        assert_eq!(pending.entries().len(), 1);
+        flush(&mut sink, &mut pending).await;
+        assert!(pending.entries().is_empty());
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests[0], requests[1]);
+        assert!(requests[1].contains("fromUnixTimestamp64Milli(1234"));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn startup_retry_is_cancellable() {
+        let mut sink = Sink::new("http://127.0.0.1:1", "test", "default", "");
+        let (tx, mut rx) = watch::channel(false);
+        let task = tokio::spawn(async move { initialize(&mut sink, &mut rx).await });
+        tx.send(true).unwrap();
+        assert!(!tokio::time::timeout(Duration::from_secs(1), task).await.unwrap().unwrap());
+    }
+
+    #[tokio::test]
+    async fn blocking_poller_exits_when_owner_is_dropped() {
+        let stop = StopPolling(std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)));
+        let flag = stop.0.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let task = tokio::task::spawn_blocking(move || {
+            let mut tx = Some(tx);
+            poll_until_stopped(flag, || {
+                if let Some(tx) = tx.take() { let _ = tx.send(()); }
+                std::thread::sleep(Duration::from_millis(1));
+            });
+        });
+        rx.await.unwrap();
+        drop(stop);
+        tokio::time::timeout(Duration::from_secs(1), task).await.unwrap().unwrap();
     }
 }

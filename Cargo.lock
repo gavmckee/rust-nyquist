@@ -1488,6 +1488,7 @@ name = "nyquist-clickhouse"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "axum",
  "clickhouse",
  "nyquist-core",
  "nyquist-sysconfig",
@@ -1623,10 +1624,12 @@ name = "nyquist-syswatch"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "clickhouse",
  "libbpf-cargo",
  "libbpf-rs",
  "libc",
+ "nyquist-core",
  "nyquist-sysconfig",
  "tokio",
  "tracing",

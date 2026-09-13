@@ -31,6 +31,7 @@ impl MetricDef {
 struct DirectBuckets {
     latest: Vec<(u64, u64)>,
     last_update: Instant,
+    stale_after: Duration,
     /// (time, cumulative counts) checkpoints, oldest first; one every
     /// window/8, retained just past the window so a baseline always exists.
     checkpoints: std::collections::VecDeque<(Instant, Vec<(u64, u64)>)>,
@@ -53,14 +54,13 @@ pub struct Registry {
 
 impl Registry {
     pub fn new(slice_width: Duration, window: Duration) -> Self {
-        // Default capacity assumes the nominal 10 ms tick; agents with faster
-        // configured samplers must use with_min_interval or slices truncate.
+        // Default raw-buffer threshold assumes the nominal 10 ms tick.
         Self::with_min_interval(slice_width, window, Duration::from_millis(10))
     }
 
     /// `min_interval` is the fastest sampler tick that will record into any
-    /// metric; per-slice sample capacity is sized from it (with 2x headroom
-    /// for scheduler-jitter clustering) so fast tickers aren't truncated.
+    /// metric; raw buffers are sized from it with 2x jitter headroom before
+    /// promoting busy slices to bucket storage.
     pub fn with_min_interval(slice_width: Duration, window: Duration, min_interval: Duration) -> Self {
         let per_slice = (slice_width.as_nanos() / min_interval.as_nanos().max(1)) as usize;
         let samples_per_slice = (per_slice * 2).clamp(crate::hist::DEFAULT_SAMPLES_PER_SLICE, 4096);
@@ -143,6 +143,15 @@ impl Registry {
     /// design §3.4). Callers pass the kernel histogram as-is each tick;
     /// windowing happens at snapshot time (see `DirectBuckets`).
     pub fn record_distribution_buckets(&self, id: MetricId, now: Instant, buckets: Vec<(u64, u64)>) {
+        self.record_distribution_buckets_with_interval(id, now, buckets, self.slice_width);
+    }
+
+    /// Cumulative buckets with the producer's configured interval. Allow three
+    /// ticks of jitter before treating a missing producer as stale.
+    pub fn record_distribution_buckets_with_interval(
+        &self, id: MetricId, now: Instant, buckets: Vec<(u64, u64)>, interval: Duration,
+    ) {
+        let stale_after = (interval * 3).max(self.slice_width * 10);
         let checkpoint_every = self.window / 8;
         if let Some(state) = self.metrics.get(&id) {
             let mut s = state.lock().unwrap();
@@ -150,6 +159,7 @@ impl Registry {
             let d = s.direct.get_or_insert_with(|| DirectBuckets {
                 latest: Vec::new(),
                 last_update: now,
+                stale_after,
                 checkpoints: std::collections::VecDeque::new(),
             });
             let due = match d.checkpoints.back() {
@@ -165,6 +175,7 @@ impl Registry {
                 let second_age = now.saturating_duration_since(d.checkpoints[1].0);
                 if second_age > self.window { d.checkpoints.pop_front(); } else { break; }
             }
+            d.stale_after = stale_after;
             d.latest = buckets;
             d.last_update = now;
         }
@@ -173,13 +184,12 @@ impl Registry {
     pub fn snapshot(&self, now: Instant) -> crate::snapshot::RegistrySnapshot {
         // A direct-bucket metric whose sampler stopped feeding it (BPF error,
         // ring death) must not keep exporting its last histogram as if live.
-        let stale_after = self.slice_width * 10;
         let mut metrics = Vec::new();
         for entry in self.metrics.iter() {
             let mut s = entry.value().lock().unwrap();
             let buckets = match &s.direct {
                 Some(d) => {
-                    if now.saturating_duration_since(d.last_update) > stale_after {
+                    if now.saturating_duration_since(d.last_update) > d.stale_after {
                         Vec::new()
                     } else {
                         // Baseline: newest checkpoint at least a full window old;
@@ -234,6 +244,16 @@ mod tests {
     use super::*;
     use crate::model::Kind;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn slow_distribution_remains_live_between_ticks_then_expires() {
+        let reg = Registry::new(Duration::from_millis(100), Duration::from_secs(60));
+        let id = reg.register(MetricDef::new("latency", Kind::Distribution));
+        let t = Instant::now();
+        reg.record_distribution_buckets_with_interval(id, t, vec![(100, 10)], Duration::from_secs(5));
+        assert_eq!(reg.snapshot(t + Duration::from_secs(4)).metrics[0].buckets, vec![(100, 10)]);
+        assert!(reg.snapshot(t + Duration::from_secs(16)).metrics[0].buckets.is_empty());
+    }
 
     #[test]
     fn counter_rate_reflects_delta_over_time() {

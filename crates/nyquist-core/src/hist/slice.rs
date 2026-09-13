@@ -14,23 +14,24 @@ pub const HIST_MAX_TRACKABLE: u64 = (1 << HIST_MAX_VALUE_POWER) - 1;
 /// Default per-slice sample capacity: the nominal 10 ms tick over a 100 ms
 /// slice yields 10 samples; 2x headroom absorbs scheduler jitter clustering.
 /// Registries built via `Registry::with_min_interval` derive a larger cap for
-/// faster tick rates instead of truncating (see that constructor).
+/// faster tick rates before promoting to bucket storage.
 pub const DEFAULT_SAMPLES_PER_SLICE: usize = 20;
 
 /// A compact accumulator for one time slice.
 ///
 /// Stores raw observed values (a Vec grown geometrically on demand, capped at
 /// `max_samples`) instead of a pre-allocated histogram bucket grid. The full
-/// histogram is built on-demand in `merge_into` rather than kept live for
+/// histogram is allocated only when the raw buffer fills, rather than for
 /// every one of the 600 ring slots.
 pub struct HistogramSlice {
     values: Vec<u64>,
     max_samples: u32,
+    overflow: Option<Histogram>,
 }
 
 impl HistogramSlice {
     pub fn new(max_samples: usize) -> Self {
-        HistogramSlice { values: Vec::new(), max_samples: max_samples.max(1) as u32 }
+        HistogramSlice { values: Vec::new(), max_samples: max_samples.max(1) as u32, overflow: None }
     }
 
     pub fn record(&mut self, value: u64) {
@@ -43,23 +44,34 @@ impl HistogramSlice {
         } else {
             value
         };
-        if self.values.len() < self.max_samples as usize {
+        if let Some(h) = &mut self.overflow {
+            h.increment(value).expect("clamped value");
+        } else if self.values.len() < self.max_samples as usize {
             self.values.push(value);
         } else {
-            // Head-truncating a full slice biases percentiles toward the
-            // front of the slice window; the capacity is sized from the
-            // configured tick rate, so hitting this means misconfiguration.
-            warn_slice_full_once(self.max_samples);
+            // Promote a busy slice to bounded bucket storage, preserving every
+            // observation even when one tick samples thousands of connections.
+            let mut h = empty_accumulator();
+            for v in self.values.drain(..) { h.increment(v).expect("clamped value"); }
+            h.increment(value).expect("clamped value");
+            self.values = Vec::new();
+            self.overflow = Some(h);
         }
     }
 
     pub fn clear(&mut self) {
         self.values.clear();
+        self.overflow = None;
     }
 
     /// Insert this slice's values into an accumulator histogram.
     /// Called from `SlidingHistogram::merge_window` for each in-window slice.
     pub fn merge_into(&self, acc: &mut Histogram) {
+        if let Some(h) = &self.overflow {
+            for b in h.iter().filter(|b| b.count() > 0) {
+                acc.add(b.end(), b.count()).expect("matching histogram bounds");
+            }
+        }
         for &v in &self.values {
             // Values are pre-clamped to HIST_MAX_TRACKABLE in record(), so
             // increment cannot fail with OutOfRange.
@@ -94,18 +106,6 @@ fn warn_clamped_once(value: u64) {
     }
 }
 
-/// One warning per process: a full slice drops samples with temporal bias.
-fn warn_slice_full_once(max_samples: u32) {
-    use std::sync::atomic::{AtomicBool, Ordering};
-    static WARNED: AtomicBool = AtomicBool::new(false);
-    if !WARNED.swap(true, Ordering::Relaxed) {
-        tracing::warn!(
-            max_samples,
-            "histogram slice full; samples dropped — is a sampler ticking faster than the configured minimum interval?"
-        );
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,17 +125,24 @@ mod tests {
     }
 
     #[test]
-    fn samples_beyond_capacity_are_dropped_gracefully() {
+    fn samples_beyond_capacity_are_preserved() {
         let mut s = HistogramSlice::new(16);
         for v in 0..100u64 { s.record(v); }
-        assert_eq!(s.values.len(), 16);
+        let mut h = empty_accumulator();
+        s.merge_into(&mut h);
+        assert_eq!(h.iter().map(|b| b.count()).sum::<u64>(), 100);
+        assert!(percentile(&h, 99.0) >= 98);
     }
 
     #[test]
     fn capacity_is_runtime_configurable() {
         let mut s = HistogramSlice::new(64);
         for v in 0..100u64 { s.record(v); }
-        assert_eq!(s.values.len(), 64);
+        assert!(s.overflow.is_some());
+        s.clear();
+        let mut h = empty_accumulator();
+        s.merge_into(&mut h);
+        assert_eq!(h.iter().map(|b| b.count()).sum::<u64>(), 0);
     }
 
     #[test]
