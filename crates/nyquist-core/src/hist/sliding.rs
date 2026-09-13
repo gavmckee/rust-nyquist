@@ -17,9 +17,8 @@ impl SlidingHistogram {
         Self::with_capacity(slice_width, window, DEFAULT_SAMPLES_PER_SLICE)
     }
 
-    /// `samples_per_slice` caps how many raw samples one slice retains; size it
-    /// from slice_width / fastest-tick-interval or fast samplers get truncated
-    /// with temporal bias (only the head of each slice survives).
+    /// `samples_per_slice` is the raw-buffer promotion threshold. Busy slices
+    /// switch to bounded bucket storage without dropping observations.
     pub fn with_capacity(slice_width: Duration, window: Duration, samples_per_slice: usize) -> Self {
         let n_slices = (window.as_nanos() / slice_width.as_nanos()).max(1) as usize;
         SlidingHistogram {

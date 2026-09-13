@@ -14,6 +14,9 @@
 use std::collections::HashMap;
 use std::time::{Duration, UNIX_EPOCH};
 use clickhouse::Client;
+use nyquist_core::pending::Pending;
+
+type PendingChange = (i64, String, String, String, String);
 
 pub struct ConfigWatcher {
     client:   Client,
@@ -37,17 +40,24 @@ impl ConfigWatcher {
         ConfigWatcher { client, database: database.to_string(), interval }
     }
 
-    pub async fn run(self) {
+    pub async fn run(self, mut shutdown: tokio::sync::watch::Receiver<bool>) {
         let mut prev: HashMap<String, String> = HashMap::new();
         let mut ready = false;
+        let mut pending = Pending::new(10_000);
+        let mut ticker = tokio::time::interval(self.interval);
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         loop {
+            if *shutdown.borrow() { break; }
+            tokio::select! {
+                _ = shutdown.changed() => break,
+                _ = ticker.tick() => {}
+            }
             if !ready {
-                match self.ensure_tables().await {
-                    Ok(()) => ready = true,
-                    Err(e) => {
-                        tracing::warn!(error = %e, "config_watcher: table init failed, retrying");
-                        tokio::time::sleep(self.interval).await;
+                match tokio::time::timeout(Duration::from_secs(3), self.ensure_tables()).await {
+                    Ok(Ok(())) => ready = true,
+                    result => {
+                        tracing::warn!(?result, "config_watcher: table init failed, retrying");
                         continue;
                     }
                 }
@@ -57,7 +67,6 @@ impl ConfigWatcher {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::warn!(error = %e, "config_watcher: collect failed");
-                    tokio::time::sleep(self.interval).await;
                     continue;
                 }
             };
@@ -82,18 +91,30 @@ impl ConfigWatcher {
                         keys  = %changes.iter().map(|(k,_,_)| k.as_str()).collect::<Vec<_>>().join(", "),
                         "config_watcher: change detected"
                     );
-                    if let Err(e) = self.insert_changes(ts_ms, &host, &changes).await {
-                        tracing::warn!(error = %e, "config_watcher: changes insert failed");
+                    for (key, old, new) in changes {
+                        pending.push((ts_ms, host.clone(), key, old, new));
                     }
                 }
             }
 
-            if let Err(e) = self.insert_values(ts_ms, &host, &current).await {
-                tracing::warn!(error = %e, "config_watcher: values insert failed");
+            self.flush_pending(&mut pending).await;
+            if let result @ (Err(_) | Ok(Err(_))) = tokio::time::timeout(
+                Duration::from_secs(3), self.insert_values(ts_ms, &host, &current),
+            ).await {
+                tracing::warn!(?result, "config_watcher: values insert failed");
             }
 
             prev = current.into_iter().collect();
-            tokio::time::sleep(self.interval).await;
+        }
+        self.flush_pending(&mut pending).await;
+    }
+
+    async fn flush_pending(&self, pending: &mut Pending<PendingChange>) {
+        if pending.entries().is_empty() { return; }
+        match tokio::time::timeout(Duration::from_secs(3), self.insert_changes(pending.entries())).await {
+            Ok(Ok(())) => pending.acknowledge(),
+            result => tracing::warn!(?result, retained = pending.entries().len(),
+                dropped_total = pending.dropped(), "config_watcher: retaining changes for retry"),
         }
     }
 
@@ -160,16 +181,14 @@ impl ConfigWatcher {
 
     async fn insert_changes(
         &self,
-        ts_ms:   i64,
-        host:    &str,
-        changes: &[(String, String, String)],
+        changes: &[PendingChange],
     ) -> Result<(), clickhouse::error::Error> {
         let mut sql = format!(
             "INSERT INTO {}.sysconfig_changes \
              (ts, hostname, key, old_value, new_value, note) VALUES ",
             self.database
         );
-        for (i, (key, old, new)) in changes.iter().enumerate() {
+        for (i, (ts_ms, host, key, old, new)) in changes.iter().enumerate() {
             if i > 0 { sql.push(','); }
             let note = fmt_note(key, old, new);
             sql.push_str(&format!(
@@ -280,6 +299,36 @@ fn esc(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn retries_pending_changes_without_retimestamping() {
+        let requests = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = requests.clone();
+        let app = axum::Router::new().route("/", axum::routing::post(move |body: String| {
+            let seen = seen.clone();
+            async move {
+                let mut requests = seen.lock().unwrap();
+                requests.push(body);
+                if requests.len() == 1 { axum::http::StatusCode::SERVICE_UNAVAILABLE }
+                else { axum::http::StatusCode::OK }
+            }
+        }));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+        let watcher = ConfigWatcher::new(&url, "test", "default", "", Duration::from_millis(1));
+        let mut pending = Pending::new(10);
+        pending.push((1234, "host".into(), "mtu".into(), "1500".into(), "9000".into()));
+        watcher.flush_pending(&mut pending).await;
+        assert_eq!(pending.entries().len(), 1);
+        watcher.flush_pending(&mut pending).await;
+        assert!(pending.entries().is_empty());
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests[0], requests[1]);
+        assert!(requests[1].contains("fromUnixTimestamp64Milli(1234"));
+        server.abort();
+    }
+
 
     #[test]
     fn fmt_note_ring() {

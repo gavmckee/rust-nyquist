@@ -112,7 +112,7 @@ impl Sampler for PacketLatency {
         }
         let counts = self.read_counts();
         if let Some(id) = self.metric_id {
-            reg.record_distribution_buckets(id, now, buckets_from_counts(&counts));
+            reg.record_distribution_buckets_with_interval(id, now, buckets_from_counts(&counts), self.interval);
         }
         if let State::Running { dropped_ptr, .. } = &self.state {
             // SAFETY: slot 0 of the 8-entry mmapable dropped array.
